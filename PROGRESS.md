@@ -13,7 +13,7 @@
 |---|---|---|
 | Overall status | `IN_PROGRESS` | `NOT_STARTED / IN_PROGRESS / BLOCKED / RELEASE_READY / RELEASED` |
 | Active Phase | P2 — APIs / Security | Đổi khi phase gate pass |
-| Active Task | `T09` — Gallery schemas/categories/packs APIs (TODO) | Một task primary tại một thời điểm |
+| Active Task | `T09` — Gallery schemas/categories/packs APIs (BLOCKED) | Một task primary tại một thời điểm |
 | Backend Owner | Codex | Owner changes require explicit agreement |
 | Frontend Owner | Antigravity | Start after API shape confirmed |
 | Target stack | Python 3.12, FastAPI, MySQL 8.0, React 18, Vite, TS strict | Change via CR |
@@ -48,7 +48,7 @@
 | T06 | CUR binary encoder & tests | Codex | DONE | 17 pytest PASS. Win32 nạp ba CUR và trả đúng hotspot. |
 | T07 | Auto-seed, lifespan, health | Codex | DONE | Fresh MySQL, 5 categories, 2 packs × 8 roles, assets and restart checks PASS. |
 | T08 | Alembic migration | Codex | DONE | Upgrade/current/downgrade, DDL và ràng buộc MySQL PASS. |
-| T09 | Gallery schemas/categories/packs APIs | Codex | TODO | — |
+| T09 | Gallery schemas/categories/packs APIs | Codex | BLOCKED | Ba route PASS trên app kiểm thử có mount. Entrypoint thật chưa mount router. |
 | T10 | Trusted asset storage adapter | Codex | TODO | — |
 | T11 | Studio convert API | Codex | TODO | — |
 | T12 | 15-slot Install.inf builder | Codex | TODO | — |
@@ -67,6 +67,58 @@
 | T25 | CI / Browser E2E / release | Antigravity + Codex review | TODO | — |
 
 ### 3.1 Active Task Card — copy and update each session
+
+```yaml
+task_id: T09
+task_name: Gallery schemas, categories and packs APIs
+agent: Codex
+status: BLOCKED
+started_at: "2026-11-17"
+completed_at: null
+primary_files:
+  - backend/app/schemas/catalog.py
+  - backend/app/api/v1/catalog.py
+dependencies: [T07, T08]
+commands_run:
+  - docker build --target development -t ccs-backend:t09-dev ./backend
+  - docker run --rm --entrypoint python ccs-backend:t09-dev -m ruff check app
+  - docker run --rm --entrypoint python ccs-backend:t09-dev -m ruff format --check app
+  - docker run --rm --entrypoint python ccs-backend:t09-dev -m mypy app
+  - docker compose up -d db (MySQL tạm)
+  - docker run -d --network <test-network> --env-file <test-env> --mount <test-entrypoint> --entrypoint python ccs-backend:t09-dev -m uvicorn t09_entry:app --host 127.0.0.1
+  - docker exec -i <test-backend> python - (HTTP checks and request SELECT counts)
+result_summary: Ba route qua kiểm thử với MySQL thật và entrypoint tạm. Category một SELECT. List và detail hai SELECT. Kiểm tra published count, defaults, filters, tie-break, phân trang, cache, normalized 422, draft 404 và tám roles/hotspots.
+open_blocker: app/main.py chưa có mount cho catalog router. TASKS.md yêu cầu ghi follow-up tích hợp và giới hạn hai file T09. Cần duyệt thêm import router và app.include_router trong app/main.py, sau đó chạy lại HTTP qua app.main:app.
+next_task: T10 (sau khi T09 PASS)
+```
+
+##### JSON thực tế từ entrypoint kiểm thử
+
+<details><summary>GET /api/v1/categories</summary>
+
+```json
+[{"id":1,"name":"Minimal","slug":"minimal","sort_order":0,"pack_count":1},{"id":2,"name":"Cute & Kawaii","slug":"cute-kawaii","sort_order":1,"pack_count":0},{"id":3,"name":"Gaming","slug":"gaming","sort_order":2,"pack_count":0},{"id":4,"name":"Anime Inspired","slug":"anime-inspired","sort_order":3,"pack_count":0},{"id":5,"name":"Neon & Cyber","slug":"neon-cyber","sort_order":4,"pack_count":1}]
+```
+
+</details>
+
+<details><summary>GET /api/v1/packs</summary>
+
+```json
+{"items":[{"id":2,"category":{"id":5,"name":"Neon & Cyber","slug":"neon-cyber"},"title":"Neon Circuit","slug":"sample-neon","description":"Original Neon Circuit sample cursor set.","thumbnail_url":"http://localhost:8000/static/samples/sample-neon/thumbnail.webp","is_animated":false,"is_premium":false,"download_count":0,"created_at":"2026-11-17T10:11:58.875585Z","pointer":{"role_type":"pointer","preview_png_url":"http://localhost:8000/static/samples/sample-neon/pointer.png","cursor_file_url":"http://localhost:8000/static/samples/sample-neon/pointer.cur","hotspot_x":3,"hotspot_y":3}},{"id":1,"category":{"id":1,"name":"Minimal","slug":"minimal"},"title":"Minimal Graphite","slug":"sample-minimal","description":"Original Minimal Graphite sample cursor set.","thumbnail_url":"http://localhost:8000/static/samples/sample-minimal/thumbnail.webp","is_animated":false,"is_premium":false,"download_count":0,"created_at":"2026-11-17T10:11:58.840310Z","pointer":{"role_type":"pointer","preview_png_url":"http://localhost:8000/static/samples/sample-minimal/pointer.png","cursor_file_url":"http://localhost:8000/static/samples/sample-minimal/pointer.cur","hotspot_x":3,"hotspot_y":3}}],"pagination":{"page":1,"limit":12,"total":2,"total_pages":1,"has_next":false}}
+```
+
+</details>
+
+<details><summary>GET /api/v1/packs/sample-minimal</summary>
+
+```json
+{"id":1,"category":{"id":1,"name":"Minimal","slug":"minimal"},"title":"Minimal Graphite","slug":"sample-minimal","description":"Original Minimal Graphite sample cursor set.","thumbnail_url":"http://localhost:8000/static/samples/sample-minimal/thumbnail.webp","is_animated":false,"is_premium":false,"download_count":0,"created_at":"2026-11-17T10:11:58.840310Z","updated_at":"2026-11-17T10:11:58.840310Z","cursor_items":[{"role_type":"pointer","preview_png_url":"http://localhost:8000/static/samples/sample-minimal/pointer.png","cursor_file_url":"http://localhost:8000/static/samples/sample-minimal/pointer.cur","hotspot_x":3,"hotspot_y":3,"id":1},{"role_type":"link","preview_png_url":"http://localhost:8000/static/samples/sample-minimal/link.png","cursor_file_url":"http://localhost:8000/static/samples/sample-minimal/link.cur","hotspot_x":11,"hotspot_y":4,"id":2},{"role_type":"text","preview_png_url":"http://localhost:8000/static/samples/sample-minimal/text.png","cursor_file_url":"http://localhost:8000/static/samples/sample-minimal/text.cur","hotspot_x":16,"hotspot_y":16,"id":3},{"role_type":"busy","preview_png_url":"http://localhost:8000/static/samples/sample-minimal/busy.png","cursor_file_url":"http://localhost:8000/static/samples/sample-minimal/busy.cur","hotspot_x":16,"hotspot_y":16,"id":4},{"role_type":"working","preview_png_url":"http://localhost:8000/static/samples/sample-minimal/working.png","cursor_file_url":"http://localhost:8000/static/samples/sample-minimal/working.cur","hotspot_x":3,"hotspot_y":3,"id":5},{"role_type":"precision","preview_png_url":"http://localhost:8000/static/samples/sample-minimal/precision.png","cursor_file_url":"http://localhost:8000/static/samples/sample-minimal/precision.cur","hotspot_x":16,"hotspot_y":16,"id":6},{"role_type":"unavailable","preview_png_url":"http://localhost:8000/static/samples/sample-minimal/unavailable.png","cursor_file_url":"http://localhost:8000/static/samples/sample-minimal/unavailable.cur","hotspot_x":16,"hotspot_y":16,"id":7},{"role_type":"move","preview_png_url":"http://localhost:8000/static/samples/sample-minimal/move.png","cursor_file_url":"http://localhost:8000/static/samples/sample-minimal/move.cur","hotspot_x":16,"hotspot_y":16,"id":8}]}
+```
+
+</details>
+
+#### Previous Task Card — T08
 
 ```yaml
 task_id: T08
@@ -315,6 +367,7 @@ next_task: T02
 | 2026-11-17 | Codex | T06 | Đã sửa lỗi typecheck trong bài test alpha và chạy lại. 17 pytest, Ruff, mypy, hex header và Win32 hotspot PASS. | `backend/app/services/cur_encoder.py`, `backend/tests/test_cur_encoder.py`, `TASKS.md`, `PROGRESS.md` | PASS | — | T07 |
 | 2026-11-17 | Codex | T07 | Sửa kiểu Table cho mypy và MIME WebP cho StaticFiles. Fresh Compose, 34 URL, hai lượt restart, health khi DB dừng và production read-only PASS. | `backend/app/db/seed.py`, `backend/app/main.py`, `TASKS.md`, `PROGRESS.md` | PASS | — | T08 |
 | 2026-11-17 | Codex | T08 | Tạo Alembic scaffold tối thiểu và migration chuẩn. Kiểm thử lifecycle revision, SHOW CREATE TABLE và ràng buộc dữ liệu trên MySQL tạm. | `backend/alembic.ini`, `backend/alembic/env.py`, `backend/alembic/versions/0001_initial.py`, `TASKS.md`, `PROGRESS.md` | PASS | — | T09 |
+| 2026-11-17 | Codex | T09 | Build, Ruff và mypy PASS. HTTP MySQL PASS qua mount tạm. Chờ duyệt mount router vào entrypoint vì T09 giới hạn hai file. | `backend/app/schemas/catalog.py`, `backend/app/api/v1/catalog.py`, `PROGRESS.md` | BLOCKED | — | T09 |
 
 **Append rule:** không sửa lịch sử kết quả cũ thành PASS; nếu retry, thêm dòng mới với cause/fix. Link logs phải được sanitize secrets.
 
@@ -510,7 +563,7 @@ Status:
 
 ## 9. Session Handoff — copy for next Agent
 
-**Trạng thái:** T01–T08 và phase gate P1 PASS trên Docker Desktop Linux/amd64. T09 đang chờ giao việc.
+**Trạng thái:** T01–T08 PASS. T09 đã kiểm thử router trên MySQL và đang chờ duyệt mount vào entrypoint chính.
 
 ### 9.1 Next Session Prompt — Codex (ready to copy)
 
@@ -520,8 +573,8 @@ Bạn đang là Codex, Backend Agent của dự án Custom Cursor Studio & Libra
 Trước khi code, đọc đủ 6 tài liệu tại root:
 PRD.md, ARCHITECTURE.md, DESIGN.md, RULES.md, TASKS.md, PROGRESS.md.
 
-T08 đã PASS. Khi được giao T09, đọc phạm vi và tiêu chí nghiệm thu
-trong TASKS.md và đối chiếu API gallery trong ARCHITECTURE.md.
+Tiếp tục T09 sau khi người dùng duyệt mount router vào app/main.py.
+Chạy lại kiểm thử HTTP bằng entrypoint chuẩn trước khi đánh dấu T09 PASS.
 ```
 
 ### 9.2 Next Session Prompt — Antigravity (use only after backend readiness)

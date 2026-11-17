@@ -3,7 +3,7 @@
 > **Project:** Custom Cursor Studio & Library | **Tracking schema:** v1.0  
 > **Last updated:** 2026-11-17 | **Status:** IN_PROGRESS
 >
-> **Current phase:** P2 — APIs / Security | **Next task:** T09
+> **Current phase:** P2 — APIs / Security | **Next task:** T10
 >
 > **Important:** Trạng thái bên dưới là template ban đầu; **không** có task kỹ thuật nào được đánh dấu PASS trước khi Agent thực sự chạy code/test.
 
@@ -13,26 +13,26 @@
 |---|---|---|
 | Overall status | `IN_PROGRESS` | `NOT_STARTED / IN_PROGRESS / BLOCKED / RELEASE_READY / RELEASED` |
 | Active Phase | P2 — APIs / Security | Đổi khi phase gate pass |
-| Active Task | `T09` — Gallery schemas/categories/packs APIs (BLOCKED) | Một task primary tại một thời điểm |
+| Active Task | `T10` — Trusted asset storage adapter (TODO) | Một task primary tại một thời điểm |
 | Backend Owner | Codex | Owner changes require explicit agreement |
 | Frontend Owner | Antigravity | Start after API shape confirmed |
 | Target stack | Python 3.12, FastAPI, MySQL 8.0, React 18, Vite, TS strict | Change via CR |
 | P0 scope | 7 endpoints, 8 product roles, 15 Windows slots | Do not silently expand |
-| Latest passing build | `ccs-backend:t07-dev` và `ccs-backend:t07-prod`, Docker Desktop Linux/amd64 | Command + evidence |
-| Latest passing tests | T08, 2026-11-17. Alembic upgrade/current/downgrade và đối chiếu SHOW CREATE TABLE trên MySQL 8.0. | Count + command + date |
+| Latest passing build | `ccs-backend:t09-main`, Docker Desktop Linux/amd64 | Command + evidence |
+| Latest passing tests | T09, 2026-11-17. Ba route qua app.main:app, OpenAPI, SQL count và health/lifespan. | Count + command + date |
 | Latest release decision | `NO-GO — not implemented` | Gate-based, not intuition |
 | Known blockers | License review, future Windows VM validation | Assign before launch |
-| Next handoff | Give Codex T09 | Copy prompt at bottom |
+| Next handoff | Give Codex T10 | Copy prompt at bottom |
 
 ## 2. Phase Status Board
 
 | Phase | Tasks | Owner | Status | Done / Total | Exit criteria | Proof |
 |---|---|---|---|---:|---|---|
 | P1 — Foundation | T01–T07 | Codex | DONE | 7/7 | Healthy Docker, 5 cat, ≥2 seeded full packs | T07 fresh startup, assets, idempotency and logs PASS. |
-| P2 — APIs / Security | T08–T15 | Codex | IN_PROGRESS | 1/8 | 7 endpoints validated, 15-slot ZIP & CUR tests | T08 PASS. Phase gate pending. |
+| P2 — APIs / Security | T08–T15 | Codex | IN_PROGRESS | 2/8 | 7 endpoints validated, 15-slot ZIP & CUR tests | T08–T09 PASS. Phase gate pending. |
 | P3 — UI / Studio | T16–T22 | Antigravity | TODO | 0/7 | Gallery, Sandbox, Studio, Mix & Share E2E | Pending |
 | P4 — Production | T23–T25 | Both; owner per task | TODO | 0/3 | HTTPS, backup restore, CI, Windows QA, license | Pending |
-| **TOTAL** | **T01–T25** | — | **IN_PROGRESS** | **8/25** | **Release gates all PASS** | **T01–T08 PASS** |
+| **TOTAL** | **T01–T25** | — | **IN_PROGRESS** | **9/25** | **Release gates all PASS** | **T01–T09 PASS** |
 
 **Allowed status:** `TODO`, `IN_PROGRESS`, `BLOCKED`, `IN_REVIEW`, `DONE`, `SKIPPED_WITH_APPROVAL`. No `DONE` unless AC and evidence complete. `SKIPPED_WITH_APPROVAL` must record Product Owner, why, risk and follow-up.
 
@@ -48,7 +48,7 @@
 | T06 | CUR binary encoder & tests | Codex | DONE | 17 pytest PASS. Win32 nạp ba CUR và trả đúng hotspot. |
 | T07 | Auto-seed, lifespan, health | Codex | DONE | Fresh MySQL, 5 categories, 2 packs × 8 roles, assets and restart checks PASS. |
 | T08 | Alembic migration | Codex | DONE | Upgrade/current/downgrade, DDL và ràng buộc MySQL PASS. |
-| T09 | Gallery schemas/categories/packs APIs | Codex | BLOCKED | Ba route PASS trên app kiểm thử có mount. Entrypoint thật chưa mount router. |
+| T09 | Gallery schemas/categories/packs APIs | Codex | DONE | Ba route và OpenAPI qua app.main:app, SQL count 1/2/2 và health/lifespan PASS. |
 | T10 | Trusted asset storage adapter | Codex | TODO | — |
 | T11 | Studio convert API | Codex | TODO | — |
 | T12 | 15-slot Install.inf builder | Codex | TODO | — |
@@ -72,27 +72,33 @@
 task_id: T09
 task_name: Gallery schemas, categories and packs APIs
 agent: Codex
-status: BLOCKED
+status: DONE
 started_at: "2026-11-17"
-completed_at: null
+completed_at: "2026-11-17"
 primary_files:
   - backend/app/schemas/catalog.py
   - backend/app/api/v1/catalog.py
+approved_additional_files:
+  - backend/app/main.py
 dependencies: [T07, T08]
 commands_run:
-  - docker build --target development -t ccs-backend:t09-dev ./backend
-  - docker run --rm --entrypoint python ccs-backend:t09-dev -m ruff check app
-  - docker run --rm --entrypoint python ccs-backend:t09-dev -m ruff format --check app
-  - docker run --rm --entrypoint python ccs-backend:t09-dev -m mypy app
+  - docker build --target development -t ccs-backend:t09-main ./backend
+  - docker run --rm --entrypoint python ccs-backend:t09-main -m ruff check app
+  - docker run --rm --entrypoint python ccs-backend:t09-main -m ruff format --check app
+  - docker run --rm --entrypoint python ccs-backend:t09-main -m mypy app
   - docker compose up -d db (MySQL tạm)
-  - docker run -d --network <test-network> --env-file <test-env> --mount <test-entrypoint> --entrypoint python ccs-backend:t09-dev -m uvicorn t09_entry:app --host 127.0.0.1
-  - docker exec -i <test-backend> python - (HTTP checks and request SELECT counts)
-result_summary: Ba route qua kiểm thử với MySQL thật và entrypoint tạm. Category một SELECT. List và detail hai SELECT. Kiểm tra published count, defaults, filters, tie-break, phân trang, cache, normalized 422, draft 404 và tám roles/hotspots.
-open_blocker: app/main.py chưa có mount cho catalog router. TASKS.md yêu cầu ghi follow-up tích hợp và giới hạn hai file T09. Cần duyệt thêm import router và app.include_router trong app/main.py, sau đó chạy lại HTTP qua app.main:app.
-next_task: T10 (sau khi T09 PASS)
+  - docker run -d --network <test-network> --env-file <test-env> --entrypoint python ccs-backend:t09-main -m uvicorn app.main:app --host 127.0.0.1
+  - docker exec -i <test-backend> python - (HTTP checks and SQL log markers)
+  - docker compose exec -T db sh -c '<mysql client>' (general log and SELECT counts)
+  - docker compose stop db
+  - docker stop <test-backend>
+  - docker logs <test-backend>
+result_summary: OpenAPI chứa đúng ba GET route. MySQL thật xác nhận filter, sort, phân trang, lỗi chuẩn hóa, draft 404 và đủ tám vai trò. General log có 1 SELECT cho categories và 2 SELECT mỗi request list/detail. Live 200 khi DB dừng, ready chuyển từ 200 sang 503. Log xác nhận startup và shutdown.
+open_blocker: null
+next_task: T10
 ```
 
-##### JSON thực tế từ entrypoint kiểm thử
+##### JSON thực tế từ app.main:app
 
 <details><summary>GET /api/v1/categories</summary>
 
@@ -105,7 +111,7 @@ next_task: T10 (sau khi T09 PASS)
 <details><summary>GET /api/v1/packs</summary>
 
 ```json
-{"items":[{"id":2,"category":{"id":5,"name":"Neon & Cyber","slug":"neon-cyber"},"title":"Neon Circuit","slug":"sample-neon","description":"Original Neon Circuit sample cursor set.","thumbnail_url":"http://localhost:8000/static/samples/sample-neon/thumbnail.webp","is_animated":false,"is_premium":false,"download_count":0,"created_at":"2026-11-17T10:11:58.875585Z","pointer":{"role_type":"pointer","preview_png_url":"http://localhost:8000/static/samples/sample-neon/pointer.png","cursor_file_url":"http://localhost:8000/static/samples/sample-neon/pointer.cur","hotspot_x":3,"hotspot_y":3}},{"id":1,"category":{"id":1,"name":"Minimal","slug":"minimal"},"title":"Minimal Graphite","slug":"sample-minimal","description":"Original Minimal Graphite sample cursor set.","thumbnail_url":"http://localhost:8000/static/samples/sample-minimal/thumbnail.webp","is_animated":false,"is_premium":false,"download_count":0,"created_at":"2026-11-17T10:11:58.840310Z","pointer":{"role_type":"pointer","preview_png_url":"http://localhost:8000/static/samples/sample-minimal/pointer.png","cursor_file_url":"http://localhost:8000/static/samples/sample-minimal/pointer.cur","hotspot_x":3,"hotspot_y":3}}],"pagination":{"page":1,"limit":12,"total":2,"total_pages":1,"has_next":false}}
+{"items":[{"id":2,"category":{"id":5,"name":"Neon & Cyber","slug":"neon-cyber"},"title":"Neon Circuit","slug":"sample-neon","description":"Original Neon Circuit sample cursor set.","thumbnail_url":"http://localhost:8000/static/samples/sample-neon/thumbnail.webp","is_animated":false,"is_premium":false,"download_count":0,"created_at":"2026-11-17T10:31:21.737867Z","pointer":{"role_type":"pointer","preview_png_url":"http://localhost:8000/static/samples/sample-neon/pointer.png","cursor_file_url":"http://localhost:8000/static/samples/sample-neon/pointer.cur","hotspot_x":3,"hotspot_y":3}},{"id":1,"category":{"id":1,"name":"Minimal","slug":"minimal"},"title":"Minimal Graphite","slug":"sample-minimal","description":"Original Minimal Graphite sample cursor set.","thumbnail_url":"http://localhost:8000/static/samples/sample-minimal/thumbnail.webp","is_animated":false,"is_premium":false,"download_count":0,"created_at":"2026-11-17T10:31:21.706051Z","pointer":{"role_type":"pointer","preview_png_url":"http://localhost:8000/static/samples/sample-minimal/pointer.png","cursor_file_url":"http://localhost:8000/static/samples/sample-minimal/pointer.cur","hotspot_x":3,"hotspot_y":3}}],"pagination":{"page":1,"limit":12,"total":2,"total_pages":1,"has_next":false}}
 ```
 
 </details>
@@ -113,7 +119,7 @@ next_task: T10 (sau khi T09 PASS)
 <details><summary>GET /api/v1/packs/sample-minimal</summary>
 
 ```json
-{"id":1,"category":{"id":1,"name":"Minimal","slug":"minimal"},"title":"Minimal Graphite","slug":"sample-minimal","description":"Original Minimal Graphite sample cursor set.","thumbnail_url":"http://localhost:8000/static/samples/sample-minimal/thumbnail.webp","is_animated":false,"is_premium":false,"download_count":0,"created_at":"2026-11-17T10:11:58.840310Z","updated_at":"2026-11-17T10:11:58.840310Z","cursor_items":[{"role_type":"pointer","preview_png_url":"http://localhost:8000/static/samples/sample-minimal/pointer.png","cursor_file_url":"http://localhost:8000/static/samples/sample-minimal/pointer.cur","hotspot_x":3,"hotspot_y":3,"id":1},{"role_type":"link","preview_png_url":"http://localhost:8000/static/samples/sample-minimal/link.png","cursor_file_url":"http://localhost:8000/static/samples/sample-minimal/link.cur","hotspot_x":11,"hotspot_y":4,"id":2},{"role_type":"text","preview_png_url":"http://localhost:8000/static/samples/sample-minimal/text.png","cursor_file_url":"http://localhost:8000/static/samples/sample-minimal/text.cur","hotspot_x":16,"hotspot_y":16,"id":3},{"role_type":"busy","preview_png_url":"http://localhost:8000/static/samples/sample-minimal/busy.png","cursor_file_url":"http://localhost:8000/static/samples/sample-minimal/busy.cur","hotspot_x":16,"hotspot_y":16,"id":4},{"role_type":"working","preview_png_url":"http://localhost:8000/static/samples/sample-minimal/working.png","cursor_file_url":"http://localhost:8000/static/samples/sample-minimal/working.cur","hotspot_x":3,"hotspot_y":3,"id":5},{"role_type":"precision","preview_png_url":"http://localhost:8000/static/samples/sample-minimal/precision.png","cursor_file_url":"http://localhost:8000/static/samples/sample-minimal/precision.cur","hotspot_x":16,"hotspot_y":16,"id":6},{"role_type":"unavailable","preview_png_url":"http://localhost:8000/static/samples/sample-minimal/unavailable.png","cursor_file_url":"http://localhost:8000/static/samples/sample-minimal/unavailable.cur","hotspot_x":16,"hotspot_y":16,"id":7},{"role_type":"move","preview_png_url":"http://localhost:8000/static/samples/sample-minimal/move.png","cursor_file_url":"http://localhost:8000/static/samples/sample-minimal/move.cur","hotspot_x":16,"hotspot_y":16,"id":8}]}
+{"id":1,"category":{"id":1,"name":"Minimal","slug":"minimal"},"title":"Minimal Graphite","slug":"sample-minimal","description":"Original Minimal Graphite sample cursor set.","thumbnail_url":"http://localhost:8000/static/samples/sample-minimal/thumbnail.webp","is_animated":false,"is_premium":false,"download_count":0,"created_at":"2026-11-17T10:31:21.706051Z","updated_at":"2026-11-17T10:31:21.706051Z","cursor_items":[{"role_type":"pointer","preview_png_url":"http://localhost:8000/static/samples/sample-minimal/pointer.png","cursor_file_url":"http://localhost:8000/static/samples/sample-minimal/pointer.cur","hotspot_x":3,"hotspot_y":3,"id":1},{"role_type":"link","preview_png_url":"http://localhost:8000/static/samples/sample-minimal/link.png","cursor_file_url":"http://localhost:8000/static/samples/sample-minimal/link.cur","hotspot_x":11,"hotspot_y":4,"id":2},{"role_type":"text","preview_png_url":"http://localhost:8000/static/samples/sample-minimal/text.png","cursor_file_url":"http://localhost:8000/static/samples/sample-minimal/text.cur","hotspot_x":16,"hotspot_y":16,"id":3},{"role_type":"busy","preview_png_url":"http://localhost:8000/static/samples/sample-minimal/busy.png","cursor_file_url":"http://localhost:8000/static/samples/sample-minimal/busy.cur","hotspot_x":16,"hotspot_y":16,"id":4},{"role_type":"working","preview_png_url":"http://localhost:8000/static/samples/sample-minimal/working.png","cursor_file_url":"http://localhost:8000/static/samples/sample-minimal/working.cur","hotspot_x":3,"hotspot_y":3,"id":5},{"role_type":"precision","preview_png_url":"http://localhost:8000/static/samples/sample-minimal/precision.png","cursor_file_url":"http://localhost:8000/static/samples/sample-minimal/precision.cur","hotspot_x":16,"hotspot_y":16,"id":6},{"role_type":"unavailable","preview_png_url":"http://localhost:8000/static/samples/sample-minimal/unavailable.png","cursor_file_url":"http://localhost:8000/static/samples/sample-minimal/unavailable.cur","hotspot_x":16,"hotspot_y":16,"id":7},{"role_type":"move","preview_png_url":"http://localhost:8000/static/samples/sample-minimal/move.png","cursor_file_url":"http://localhost:8000/static/samples/sample-minimal/move.cur","hotspot_x":16,"hotspot_y":16,"id":8}]}
 ```
 
 </details>
@@ -368,6 +374,7 @@ next_task: T02
 | 2026-11-17 | Codex | T07 | Sửa kiểu Table cho mypy và MIME WebP cho StaticFiles. Fresh Compose, 34 URL, hai lượt restart, health khi DB dừng và production read-only PASS. | `backend/app/db/seed.py`, `backend/app/main.py`, `TASKS.md`, `PROGRESS.md` | PASS | — | T08 |
 | 2026-11-17 | Codex | T08 | Tạo Alembic scaffold tối thiểu và migration chuẩn. Kiểm thử lifecycle revision, SHOW CREATE TABLE và ràng buộc dữ liệu trên MySQL tạm. | `backend/alembic.ini`, `backend/alembic/env.py`, `backend/alembic/versions/0001_initial.py`, `TASKS.md`, `PROGRESS.md` | PASS | — | T09 |
 | 2026-11-17 | Codex | T09 | Build, Ruff và mypy PASS. HTTP MySQL PASS qua mount tạm. Chờ duyệt mount router vào entrypoint vì T09 giới hạn hai file. | `backend/app/schemas/catalog.py`, `backend/app/api/v1/catalog.py`, `PROGRESS.md` | BLOCKED | — | T09 |
+| 2026-11-17 | Codex | T09 | Sau khi được duyệt, mount router một lần trong main.py. Build, OpenAPI, HTTP MySQL, số SELECT và health/lifespan đều PASS qua app.main:app. | `backend/app/main.py`, `TASKS.md`, `PROGRESS.md` | PASS | — | T10 |
 
 **Append rule:** không sửa lịch sử kết quả cũ thành PASS; nếu retry, thêm dòng mới với cause/fix. Link logs phải được sanitize secrets.
 
@@ -563,7 +570,7 @@ Status:
 
 ## 9. Session Handoff — copy for next Agent
 
-**Trạng thái:** T01–T08 PASS. T09 đã kiểm thử router trên MySQL và đang chờ duyệt mount vào entrypoint chính.
+**Trạng thái:** T01–T09 PASS. T10 đang chờ giao việc.
 
 ### 9.1 Next Session Prompt — Codex (ready to copy)
 
@@ -573,8 +580,8 @@ Bạn đang là Codex, Backend Agent của dự án Custom Cursor Studio & Libra
 Trước khi code, đọc đủ 6 tài liệu tại root:
 PRD.md, ARCHITECTURE.md, DESIGN.md, RULES.md, TASKS.md, PROGRESS.md.
 
-Tiếp tục T09 sau khi người dùng duyệt mount router vào app/main.py.
-Chạy lại kiểm thử HTTP bằng entrypoint chuẩn trước khi đánh dấu T09 PASS.
+T09 đã PASS qua app.main:app. Khi được giao T10, đọc phạm vi và tiêu chí nghiệm thu
+trong TASKS.md và đối chiếu contract storage trong ARCHITECTURE.md.
 ```
 
 ### 9.2 Next Session Prompt — Antigravity (use only after backend readiness)

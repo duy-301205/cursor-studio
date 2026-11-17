@@ -157,10 +157,10 @@ The linear ordering above is the recommended solo workflow, not an excuse to wai
 - **Primary files:** `backend/app/schemas/catalog.py`, `backend/app/api/v1/catalog.py`.
 - **Technical work:** `GET /categories`, `GET /packs`, `GET /packs/{slug}` with Pydantic response DTO; category published counts; q/slug/category filtering; stable popular/newest pagination; eager 8 roles sorted; pointer DTO in list. Ensure `main.py` router mount from T07 scaffold becomes active; if missing, record a tiny integration follow-up, never silently violate 2-file scope.
 - **Acceptance criteria:**
-  - [ ] List default `page=1,limit=12,sort=popular`; category counts only published; no N+1.
-  - [ ] `?page=0`, `?limit=49`, `?sort=invalid` return normalized 422.
-  - [ ] Published detail has 8 roles + URLs/hotspots; draft slug returns 404.
-  - [ ] JSON property names, order policy and pagination match examples in Architecture.
+  - [x] List default `page=1,limit=12,sort=popular`; category counts only published; no N+1.
+  - [x] `?page=0`, `?limit=49`, `?sort=invalid` return normalized 422.
+  - [x] Published detail has 8 roles + URLs/hotspots; draft slug returns 404.
+  - [x] JSON property names, order policy and pagination match examples in Architecture.
 - **Evidence:** three curl JSON samples saved in PROGRESS reference.
 
 ### T10 — Trusted storage adapter and traversal tests

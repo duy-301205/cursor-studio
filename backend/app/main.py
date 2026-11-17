@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from starlette.staticfiles import StaticFiles
 from starlette.types import Receive, Scope, Send
 
+from app.api.v1.catalog import router as catalog_router
 from app.core.config import Settings
 from app.db.seed import SAMPLES_DIRECTORY, seed_development
 from app.db.session import DatabaseState, database_lifespan, get_db
@@ -75,6 +76,7 @@ app = FastAPI(
     docs_url=None,
     redoc_url=None,
 )
+app.include_router(catalog_router)
 
 mimetypes.add_type("image/webp", ".webp")
 _sample_files = StaticFiles(directory=SAMPLES_DIRECTORY, check_dir=False)

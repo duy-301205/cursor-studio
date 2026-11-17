@@ -145,10 +145,10 @@ The linear ordering above is the recommended solo workflow, not an excuse to wai
 - **Primary files:** `backend/alembic/env.py`, `backend/alembic/versions/0001_initial.py`.
 - **Technical work:** async migration environment, initial migration matching DDL columns/index/constraints, upgrade/downgrade; `alembic.ini` supplied by T01 scaffold. Dev data remains; migration intended for clean production schema.
 - **Acceptance criteria:**
-  - [ ] `alembic upgrade head` on clean DB creates 4 tables + indexes + FK + CHECK.
-  - [ ] `alembic current` reports head; downgrade test on disposable DB passes.
-  - [ ] Migration does not rely on backend startup `create_all()`.
-  - [ ] Unique pack slug, share code and `(pack_id,role_type)` enforced by DB.
+  - [x] `alembic upgrade head` on clean DB creates 4 tables + indexes + FK + CHECK.
+  - [x] `alembic current` reports head; downgrade test on disposable DB passes.
+  - [x] Migration does not rely on backend startup `create_all()`.
+  - [x] Unique pack slug, share code and `(pack_id,role_type)` enforced by DB.
 - **Evidence:** generated `SHOW CREATE TABLE` comparison to doc.
 
 ### T09 — Gallery schemas + categories/list/detail endpoints

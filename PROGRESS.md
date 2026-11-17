@@ -3,7 +3,7 @@
 > **Project:** Custom Cursor Studio & Library | **Tracking schema:** v1.0  
 > **Last updated:** 2026-11-17 | **Status:** IN_PROGRESS
 >
-> **Current phase:** P2 — APIs / Security | **Next task:** T08
+> **Current phase:** P2 — APIs / Security | **Next task:** T09
 >
 > **Important:** Trạng thái bên dưới là template ban đầu; **không** có task kỹ thuật nào được đánh dấu PASS trước khi Agent thực sự chạy code/test.
 
@@ -13,26 +13,26 @@
 |---|---|---|
 | Overall status | `IN_PROGRESS` | `NOT_STARTED / IN_PROGRESS / BLOCKED / RELEASE_READY / RELEASED` |
 | Active Phase | P2 — APIs / Security | Đổi khi phase gate pass |
-| Active Task | `T08` — Alembic migration (TODO) | Một task primary tại một thời điểm |
+| Active Task | `T09` — Gallery schemas/categories/packs APIs (TODO) | Một task primary tại một thời điểm |
 | Backend Owner | Codex | Owner changes require explicit agreement |
 | Frontend Owner | Antigravity | Start after API shape confirmed |
 | Target stack | Python 3.12, FastAPI, MySQL 8.0, React 18, Vite, TS strict | Change via CR |
 | P0 scope | 7 endpoints, 8 product roles, 15 Windows slots | Do not silently expand |
 | Latest passing build | `ccs-backend:t07-dev` và `ccs-backend:t07-prod`, Docker Desktop Linux/amd64 | Command + evidence |
-| Latest passing tests | T07, 2026-11-17. MySQL mới, 34 asset URLs, restart hai lần, readiness 503/recovery và production read-only. | Count + command + date |
+| Latest passing tests | T08, 2026-11-17. Alembic upgrade/current/downgrade và đối chiếu SHOW CREATE TABLE trên MySQL 8.0. | Count + command + date |
 | Latest release decision | `NO-GO — not implemented` | Gate-based, not intuition |
 | Known blockers | License review, future Windows VM validation | Assign before launch |
-| Next handoff | Give Codex T08 | Copy prompt at bottom |
+| Next handoff | Give Codex T09 | Copy prompt at bottom |
 
 ## 2. Phase Status Board
 
 | Phase | Tasks | Owner | Status | Done / Total | Exit criteria | Proof |
 |---|---|---|---|---:|---|---|
 | P1 — Foundation | T01–T07 | Codex | DONE | 7/7 | Healthy Docker, 5 cat, ≥2 seeded full packs | T07 fresh startup, assets, idempotency and logs PASS. |
-| P2 — APIs / Security | T08–T15 | Codex | TODO | 0/8 | 7 endpoints validated, 15-slot ZIP & CUR tests | Pending |
+| P2 — APIs / Security | T08–T15 | Codex | IN_PROGRESS | 1/8 | 7 endpoints validated, 15-slot ZIP & CUR tests | T08 PASS. Phase gate pending. |
 | P3 — UI / Studio | T16–T22 | Antigravity | TODO | 0/7 | Gallery, Sandbox, Studio, Mix & Share E2E | Pending |
 | P4 — Production | T23–T25 | Both; owner per task | TODO | 0/3 | HTTPS, backup restore, CI, Windows QA, license | Pending |
-| **TOTAL** | **T01–T25** | — | **IN_PROGRESS** | **7/25** | **Release gates all PASS** | **T01–T07 PASS** |
+| **TOTAL** | **T01–T25** | — | **IN_PROGRESS** | **8/25** | **Release gates all PASS** | **T01–T08 PASS** |
 
 **Allowed status:** `TODO`, `IN_PROGRESS`, `BLOCKED`, `IN_REVIEW`, `DONE`, `SKIPPED_WITH_APPROVAL`. No `DONE` unless AC and evidence complete. `SKIPPED_WITH_APPROVAL` must record Product Owner, why, risk and follow-up.
 
@@ -47,7 +47,7 @@
 | T05 | Cursor item / share models | Codex | DONE | Bốn bảng trong metadata, tám role, DDL MySQL, Ruff và mypy PASS. |
 | T06 | CUR binary encoder & tests | Codex | DONE | 17 pytest PASS. Win32 nạp ba CUR và trả đúng hotspot. |
 | T07 | Auto-seed, lifespan, health | Codex | DONE | Fresh MySQL, 5 categories, 2 packs × 8 roles, assets and restart checks PASS. |
-| T08 | Alembic migration | Codex | TODO | — |
+| T08 | Alembic migration | Codex | DONE | Upgrade/current/downgrade, DDL và ràng buộc MySQL PASS. |
 | T09 | Gallery schemas/categories/packs APIs | Codex | TODO | — |
 | T10 | Trusted asset storage adapter | Codex | TODO | — |
 | T11 | Studio convert API | Codex | TODO | — |
@@ -67,6 +67,36 @@
 | T25 | CI / Browser E2E / release | Antigravity + Codex review | TODO | — |
 
 ### 3.1 Active Task Card — copy and update each session
+
+```yaml
+task_id: T08
+task_name: Alembic canonical MySQL schema migration
+agent: Codex
+status: DONE
+completed_at: "2026-11-17"
+primary_files:
+  - backend/alembic/env.py
+  - backend/alembic/versions/0001_initial.py
+scaffold:
+  - backend/alembic.ini
+dependencies: [T07]
+commands_run:
+  - docker compose up -d db
+  - docker inspect <test-db> (wait for healthy)
+  - alembic upgrade head --sql
+  - alembic upgrade head
+  - alembic current
+  - alembic downgrade base
+  - python -m ruff check app alembic
+  - python -m ruff format --check alembic
+  - python -m mypy app alembic
+result_summary: Dùng MySQL mới trong project Compose tạm và mount backend vào image hiện có. Alembic chạy riêng. SHOW CREATE TABLE của bốn bảng trùng với kết quả chạy DDL chuẩn trên cùng MySQL. DB từ chối trùng slug, mã chia sẻ và pack/role. Đã xác minh ASCII phân biệt hoa thường, CHECK, FK RESTRICT/CASCADE và downgrade base.
+open_blocker: null
+deployment_followup: Dockerfile hiện chưa COPY Alembic. Khi đóng gói production cho T23, cần đưa alembic.ini và thư mục alembic vào image để lệnh migration chạy trực tiếp.
+next_task: T09
+```
+
+#### Previous Task Card — T07
 
 ```yaml
 task_id: T07
@@ -284,6 +314,7 @@ next_task: T02
 | 2026-11-17 | Codex | T05 | Ruff yêu cầu ngắt dòng import SQLAlchemy. Đã chỉnh và chạy lại build, Ruff, format, mypy, metadata và DDL MySQL. | `backend/app/models/cursor_item.py`, `backend/app/models/custom_creation.py`, `TASKS.md`, `PROGRESS.md` | PASS | — | T06 |
 | 2026-11-17 | Codex | T06 | Đã sửa lỗi typecheck trong bài test alpha và chạy lại. 17 pytest, Ruff, mypy, hex header và Win32 hotspot PASS. | `backend/app/services/cur_encoder.py`, `backend/tests/test_cur_encoder.py`, `TASKS.md`, `PROGRESS.md` | PASS | — | T07 |
 | 2026-11-17 | Codex | T07 | Sửa kiểu Table cho mypy và MIME WebP cho StaticFiles. Fresh Compose, 34 URL, hai lượt restart, health khi DB dừng và production read-only PASS. | `backend/app/db/seed.py`, `backend/app/main.py`, `TASKS.md`, `PROGRESS.md` | PASS | — | T08 |
+| 2026-11-17 | Codex | T08 | Tạo Alembic scaffold tối thiểu và migration chuẩn. Kiểm thử lifecycle revision, SHOW CREATE TABLE và ràng buộc dữ liệu trên MySQL tạm. | `backend/alembic.ini`, `backend/alembic/env.py`, `backend/alembic/versions/0001_initial.py`, `TASKS.md`, `PROGRESS.md` | PASS | — | T09 |
 
 **Append rule:** không sửa lịch sử kết quả cũ thành PASS; nếu retry, thêm dòng mới với cause/fix. Link logs phải được sanitize secrets.
 
@@ -479,7 +510,7 @@ Status:
 
 ## 9. Session Handoff — copy for next Agent
 
-**Trạng thái:** T01–T07 và phase gate P1 PASS trên Docker Desktop Linux/amd64. T08 đang chờ giao việc.
+**Trạng thái:** T01–T08 và phase gate P1 PASS trên Docker Desktop Linux/amd64. T09 đang chờ giao việc.
 
 ### 9.1 Next Session Prompt — Codex (ready to copy)
 
@@ -489,8 +520,8 @@ Bạn đang là Codex, Backend Agent của dự án Custom Cursor Studio & Libra
 Trước khi code, đọc đủ 6 tài liệu tại root:
 PRD.md, ARCHITECTURE.md, DESIGN.md, RULES.md, TASKS.md, PROGRESS.md.
 
-T07 đã PASS. Khi được giao T08, đọc phạm vi và tiêu chí nghiệm thu
-trong TASKS.md và đối chiếu DDL MySQL trong ARCHITECTURE.md.
+T08 đã PASS. Khi được giao T09, đọc phạm vi và tiêu chí nghiệm thu
+trong TASKS.md và đối chiếu API gallery trong ARCHITECTURE.md.
 ```
 
 ### 9.2 Next Session Prompt — Antigravity (use only after backend readiness)

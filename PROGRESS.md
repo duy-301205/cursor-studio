@@ -3,7 +3,7 @@
 > **Project:** Custom Cursor Studio & Library | **Tracking schema:** v1.0  
 > **Last updated:** 2026-11-17 | **Status:** IN_PROGRESS
 >
-> **Current phase:** P3 — UI / Studio | **Next task:** T16
+> **Current phase:** P3 — UI / Studio | **Next task:** T18
 >
 > **Important:** Trạng thái bên dưới là template ban đầu; **không** có task kỹ thuật nào được đánh dấu PASS trước khi Agent thực sự chạy code/test.
 
@@ -13,16 +13,16 @@
 |---|---|---|
 | Overall status | `IN_PROGRESS` | `NOT_STARTED / IN_PROGRESS / BLOCKED / RELEASE_READY / RELEASED` |
 | Active Phase | P3 — UI / Studio | Đổi khi phase gate pass |
-| Active Task | `T16` — Vite React strict scaffold (TODO, Antigravity) | Một task primary tại một thời điểm |
+| Active Task | `T18` — PackCard and API-driven GalleryPage (TODO, Antigravity) | Một task primary tại một thời điểm |
 | Backend Owner | Codex | Owner changes require explicit agreement |
 | Frontend Owner | Antigravity | Start after API shape confirmed |
 | Target stack | Python 3.12, FastAPI, MySQL 8.0, React 18, Vite, TS strict | Change via CR |
 | P0 scope | 7 endpoints, 8 product roles, 15 Windows slots | Do not silently expand |
-| Latest passing build | `ccs-backend:t15-dev`, Docker Desktop Linux/amd64 | Command + evidence |
-| Latest passing tests | T15, 2026-11-17. 70 pytest trên Docker Compose và MySQL tạm. Ruff, mypy và OpenAPI PASS. | Count + command + date |
+| Latest passing build | Vite 5.4.21 React 18 TS build (`dist/`), `ccs-backend:t15-dev` | Command + evidence |
+| Latest passing tests | T17, 2026-11-17. `npm test` (11/11 tests PASS: 7 endpoints, query serialization, Content-Disposition, ApiError, 422/429/AbortSignal, Blob/FormData), `npm run typecheck`, `npm run build` PASS. | Count + command + date |
 | Latest release decision | `NO-GO — not implemented` | Gate-based, not intuition |
 | Known blockers | License review, future Windows VM validation | Assign before launch |
-| Next handoff | Give Antigravity T16 | Copy prompt at bottom |
+| Next handoff | Antigravity T18 — PackCard and API-driven GalleryPage | Copy prompt at bottom |
 
 ## 2. Phase Status Board
 
@@ -30,9 +30,9 @@
 |---|---|---|---|---:|---|---|
 | P1 — Foundation | T01–T07 | Codex | DONE | 7/7 | Healthy Docker, 5 cat, ≥2 seeded full packs | T07 fresh startup, assets, idempotency and logs PASS. |
 | P2 — APIs / Security | T08–T15 | Codex | DONE | 8/8 | 7 endpoints validated, 15-slot ZIP & CUR tests | T15 Compose, MySQL and cross-endpoint pytest PASS. |
-| P3 — UI / Studio | T16–T22 | Antigravity | TODO | 0/7 | Gallery, Sandbox, Studio, Mix & Share E2E | Pending |
+| P3 — UI / Studio | T16–T22 | Antigravity | IN_PROGRESS | 2/7 | Gallery, Sandbox, Studio, Mix & Share E2E | T16 scaffold & app shell, T17 typed API client & DTOs PASS. |
 | P4 — Production | T23–T25 | Both; owner per task | TODO | 0/3 | HTTPS, backup restore, CI, Windows QA, license | Pending |
-| **TOTAL** | **T01–T25** | — | **IN_PROGRESS** | **15/25** | **Release gates all PASS** | **T01–T15 PASS** |
+| **TOTAL** | **T01–T25** | — | **IN_PROGRESS** | **17/25** | **Release gates all PASS** | **T01–T17 PASS** |
 
 **Allowed status:** `TODO`, `IN_PROGRESS`, `BLOCKED`, `IN_REVIEW`, `DONE`, `SKIPPED_WITH_APPROVAL`. No `DONE` unless AC and evidence complete. `SKIPPED_WITH_APPROVAL` must record Product Owner, why, risk and follow-up.
 
@@ -55,8 +55,8 @@
 | T13 | RAM ZIP packager / download API | Codex | DONE | ZIP, manifest, ANI, lỗi asset và 12 lượt đồng thời qua app.main:app PASS. |
 | T14 | Share service / endpoints | Codex | DONE | POST/GET, 90-day TTL, 404/410, 5/min và MySQL collision retry PASS. |
 | T15 | API integration suite | Codex | DONE | 9 integration + 61 hồi quy, Compose và OpenAPI PASS. |
-| T16 | Vite React strict scaffold | Antigravity | TODO | — |
-| T17 | API client & DTO | Antigravity | TODO | — |
+| T16 | Vite React strict scaffold | Antigravity | DONE | Vite + React 18 + TS strict + Tailwind + Lucide. App Shell, Theme persistence (ccs.theme.v1), responsive (1440/768/375px), npm ci/typecheck/build/browser test PASS. |
+| T17 | API client & DTO | Antigravity | DONE | 7 endpoints typed DTO, 8 roles, custom ApiError, AbortSignal, Blob/FormData, 11 node:test PASS, typecheck strict PASS. |
 | T18 | Gallery / PackCard | Antigravity | TODO | — |
 | T19 | Sandbox / Pack Detail | Antigravity | TODO | — |
 | T20 | Hotspot picker / lazy AI | Antigravity | TODO | — |
@@ -67,6 +67,51 @@
 | T25 | CI / Browser E2E / release | Antigravity + Codex review | TODO | — |
 
 ### 3.1 Active Task Card — copy and update each session
+
+```yaml
+task_id: T17
+task_name: Typed REST client and API contracts
+agent: Antigravity
+status: DONE
+completed_at: "2026-11-17"
+primary_files:
+  - frontend/src/types/api.ts
+  - frontend/src/lib/api.ts
+dependencies: [T16, T15]
+commands_run:
+  - npm run typecheck (tsc --noEmit with strict & exactOptionalPropertyTypes)
+  - npm run build (tsc && vite build)
+  - npm test (node --test --experimental-strip-types src/tests/api.test.ts)
+result_summary: Định nghĩa đầy đủ toàn bộ DTOs cho 7 endpoints và 8 role con trỏ chuẩn, khớp hoàn toàn với Pydantic schemas của Backend và ARCHITECTURE.md. Triển khai 7 typed fetch wrappers (native fetch), ApiError chuẩn hóa (hỗ trợ Catalog/Studio format, FastAPI 422 loc/msg mapping, và Rate limit 429 Retry-After), URLSearchParams / path encoding an toàn, AbortSignal handling, Blob cho ZIP và CUR download (kèm parse Content-Disposition RFC 5987/6266), FormData cho convertCursor. Toàn bộ 11 bài kiểm thử tự động đạt 100% PASS; typecheck strict và vite build PASS sạch không cảnh báo.
+open_blocker: null
+next_task: T18
+```
+
+#### Previous Task Card — T16
+
+```yaml
+task_id: T16
+task_name: Vite React TS/Tailwind scaffold + base app shell
+agent: Antigravity
+status: DONE
+completed_at: "2026-11-17"
+primary_files:
+  - frontend/package.json
+  - frontend/src/App.tsx
+dependencies: [T09, T15]
+commands_run:
+  - npm install (lockfile generation)
+  - npm ci
+  - npm run typecheck (tsc --noEmit)
+  - npm run build (tsc && vite build)
+  - npx vite --host 127.0.0.1 --port 5173
+  - Browser subagent preview verification (1440px Desktop, 768px Tablet, 375px Mobile)
+result_summary: Base app shell hoàn chỉnh với React 18, Vite 5, TypeScript strict (strict: true, noUncheckedIndexedAccess: true, exactOptionalPropertyTypes: true), Tailwind v3 và Lucide React. Design tokens light/dark chính xác theo DESIGN.md. Theme switch hoạt động thực tế với key ccs.theme.v1 trong localStorage kèm inline script chống FOUC. Header responsive desktop/tablet/mobile (drawer menu toggle aria-expanded). Placeholders cấu trúc sạch sẽ cho Explore, Studio, Mix & Match, không hardcode dummy mock cursors. Đọc VITE_API_BASE_URL qua import.meta.env. Tất cả kiểm thử npm ci, typecheck, build PASS; Browser verification 0 console errors.
+open_blocker: null
+next_task: T17
+```
+
+#### Previous Task Card — T15
 
 ```yaml
 task_id: T15
@@ -774,33 +819,24 @@ Status:
 
 ## 9. Session Handoff — copy for next Agent
 
-**Trạng thái:** Backend API T01–T15 và phase P2 PASS. T16 thuộc Antigravity và đang chờ giao. Backend production và backup còn T23–T24, cùng phần review CI Backend ở T25.
+**Trạng thái:** Backend API T01–T15 (Phase 1–2) và Frontend T16, T17 (Phase 3) đã PASS. T18 (PackCard and API-driven GalleryPage) là task tiếp theo dành cho Antigravity.
 
-### 9.1 Next Session Prompt — Codex (ready to copy)
+### 9.1 Next Session Prompt — Antigravity (T18)
 
 ```text
-Bạn đang là Codex, Backend Agent của dự án Custom Cursor Studio & Library.
+Bạn đang là Antigravity, Frontend Agent của dự án Custom Cursor Studio & Library.
 
 Trước khi code, đọc đủ 6 tài liệu tại root:
 PRD.md, ARCHITECTURE.md, DESIGN.md, RULES.md, TASKS.md, PROGRESS.md.
 
-T15 đã PASS. Khi được giao T23, đối chiếu phạm vi trong TASKS.md,
-cấu hình production trong ARCHITECTURE.md và deployment follow-up của T08.
-```
-
-### 9.2 Next Session Prompt — Antigravity (use only after backend readiness)
-
-```text
-Bạn đang là Antigravity, Frontend Agent của Custom Cursor Studio & Library.
-Đọc 6 tài liệu chuẩn, đặc biệt API contract ở ARCHITECTURE.md và
-STRICT RULES trong RULES.md.
-
-Chỉ bắt đầu task T16 khi backend shape của T09 hoặc T15 đã ổn định,
-hoặc Product Owner cho phép scaffold frontend trước. Không tự giả mạo API.
-Primary files của T16: frontend/package.json, frontend/src/App.tsx.
-Vite + React 18 + TypeScript strict + Tailwind + Lucide; site theme shell.
-Chạy npm ci/typecheck/build, ghi evidence vào PROGRESS.md.
-Sau T16 handoff T17, không nhảy sang Studio khi API client chưa sẵn sàng.
+Task hiện tại: T18 — PackCard and API-driven GalleryPage.
+Primary files: frontend/src/components/PackCard.tsx, frontend/src/features/gallery/GalleryPage.tsx.
+Yêu cầu:
+- Category chips, text search debounce 250ms, sort (popular/newest) và pagination URL sync.
+- Skeleton/empty/error states; responsive cards.
+- Hover-to-Test pointer dạng CSS cursor với hotspot và keyword fallback bắt buộc.
+- Sử dụng typed API client (apiClient.getCategories, apiClient.getPacks) từ T17.
+- Sau khi T18 hoàn thành, DỪNG lại để báo cáo. Không tự động chuyển sang T19.
 ```
 
 ### 9.3 End-of-session handoff update template

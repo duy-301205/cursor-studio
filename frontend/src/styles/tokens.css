@@ -1,0 +1,42 @@
+/* Design tokens strictly adhering to DESIGN.md Section 2.1 & 2.2 */
+:root {
+  color-scheme: light;
+  --color-canvas: #F7F8FC;
+  --color-surface: #FFFFFF;
+  --color-raised: #F0F3FA;
+  --color-overlay: #FFFFFF;
+  --color-ink: #171A2B;
+  --color-muted: #647084;
+  --color-line: #E3E8F2;
+  --color-brand: #6D5EF8;
+  --color-brand-hover: #5546D9;
+  --color-brand-soft: #EEEAFE;
+  --color-accent: #0A897D;
+  --color-success: #117A56;
+  --color-warning: #A56710;
+  --color-danger: #CA3C55;
+  --color-focus: #6054EC;
+  --checker-a: #FFFFFF;
+  --checker-b: #E2E6EF;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --color-canvas: #0D1020;
+  --color-surface: #171B2E;
+  --color-raised: #22283E;
+  --color-overlay: #242A43;
+  --color-ink: #F4F6FF;
+  --color-muted: #A6B2CA;
+  --color-line: #343C58;
+  --color-brand: #9B8EFF;
+  --color-brand-hover: #B5AAFF;
+  --color-brand-soft: #292449;
+  --color-accent: #43D7C6;
+  --color-success: #53D2A1;
+  --color-warning: #FFCA74;
+  --color-danger: #FF7D96;
+  --color-focus: #B3A9FF;
+  --checker-a: #2A304A;
+  --checker-b: #39425C;
+}

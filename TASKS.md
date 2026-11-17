@@ -247,10 +247,10 @@ The linear ordering above is the recommended solo workflow, not an excuse to wai
 - **Primary files:** `frontend/package.json`, `frontend/src/App.tsx`.
 - **Technical work:** run Vite React+TS generator (index.html, main.tsx, tsconfig, vite.config, lockfile as mechanical outputs); set React 18, strict TS and Tailwind/Lucide; App shell header/nav/theme provider and placeholder route surfaces. Route placeholders are **not production mock data** and must be replaced by end T22.
 - **Acceptance criteria:**
-  - [ ] `npm ci`, `npm run dev`, `npm run typecheck`, `npm run build` pass.
-  - [ ] Site theme Light/Dark works, header responsive, font tokens available.
-  - [ ] `VITE_API_BASE_URL` from env; no backend URL hardcoded in components.
-  - [ ] Generated scaffold files listed explicitly in report; TS config strict flags set.
+  - [x] `npm ci`, `npm run dev`, `npm run typecheck`, `npm run build` pass.
+  - [x] Site theme Light/Dark works, header responsive, font tokens available.
+  - [x] `VITE_API_BASE_URL` from env; no backend URL hardcoded in components.
+  - [x] Generated scaffold files listed explicitly in report; TS config strict flags set.
 - **Evidence:** dev screenshot both site themes + build logs.
 
 ### T17 — Typed REST client and API contracts
@@ -259,10 +259,10 @@ The linear ordering above is the recommended solo workflow, not an excuse to wai
 - **Primary files:** `frontend/src/types/api.ts`, `frontend/src/lib/api.ts`.
 - **Technical work:** DTO types matching 7 endpoints, all role enums, fetch typed wrappers, pagination params, error handler, GET abort/timeouts; Blob download for ZIP/CUR, `FormData` for studio, no manual multipart content-type; encoded query params.
 - **Acceptance criteria:**
-  - [ ] No `any`, no type cast hiding missing fields; API errors map to user readable codes.
-  - [ ] Can GET categories, list and detail from Docker seed; binary download uses Blob safely.
-  - [ ] Browser network `VITE_API_BASE_URL` correctly points to dev API; CORS handled by backend.
-  - [ ] `npm run typecheck` passes with `strict`, `exactOptionalPropertyTypes`.
+  - [x] No `any`, no type cast hiding missing fields; API errors map to user readable codes.
+  - [x] Can GET categories, list and detail from Docker seed; binary download uses Blob safely.
+  - [x] Browser network `VITE_API_BASE_URL` correctly points to dev API; CORS handled by backend.
+  - [x] `npm run typecheck` passes with `strict`, `exactOptionalPropertyTypes`.
 - **Evidence:** Network response screenshots or logs excluding binary/raw photo.
 
 ### T18 — `PackCard` and API-driven `GalleryPage`

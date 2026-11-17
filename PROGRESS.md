@@ -3,7 +3,7 @@
 > **Project:** Custom Cursor Studio & Library | **Tracking schema:** v1.0  
 > **Last updated:** 2026-11-17 | **Status:** IN_PROGRESS
 >
-> **Current phase:** P3 — UI / Studio | **Next task:** T18
+> **Current phase:** P3 — UI / Studio | **Next task:** T19
 >
 > **Important:** Trạng thái bên dưới là template ban đầu; **không** có task kỹ thuật nào được đánh dấu PASS trước khi Agent thực sự chạy code/test.
 
@@ -13,16 +13,16 @@
 |---|---|---|
 | Overall status | `IN_PROGRESS` | `NOT_STARTED / IN_PROGRESS / BLOCKED / RELEASE_READY / RELEASED` |
 | Active Phase | P3 — UI / Studio | Đổi khi phase gate pass |
-| Active Task | `T18` — PackCard and API-driven GalleryPage (TODO, Antigravity) | Một task primary tại một thời điểm |
+| Active Task | `T19` — 8-role Sandbox + Pack Detail (TODO, Antigravity) | Một task primary tại một thời điểm |
 | Backend Owner | Codex | Owner changes require explicit agreement |
 | Frontend Owner | Antigravity | Start after API shape confirmed |
 | Target stack | Python 3.12, FastAPI, MySQL 8.0, React 18, Vite, TS strict | Change via CR |
 | P0 scope | 7 endpoints, 8 product roles, 15 Windows slots | Do not silently expand |
 | Latest passing build | Vite 5.4.21 React 18 TS build (`dist/`), `ccs-backend:t15-dev` | Command + evidence |
-| Latest passing tests | T17, 2026-11-17. `npm test` (11/11 tests PASS: 7 endpoints, query serialization, Content-Disposition, ApiError, 422/429/AbortSignal, Blob/FormData), `npm run typecheck`, `npm run build` PASS. | Count + command + date |
+| Latest passing tests | T18, 2026-11-17. Live Browser E2E verification với Docker backend thực tế (real categories & packs, hover-to-test cursor, category filter, 250ms debounced search, sort, sticky Try banner, mobile 375px responsive, 0 console errors) PASS. npm run typecheck & build PASS. | Count + command + date |
 | Latest release decision | `NO-GO — not implemented` | Gate-based, not intuition |
 | Known blockers | License review, future Windows VM validation | Assign before launch |
-| Next handoff | Antigravity T18 — PackCard and API-driven GalleryPage | Copy prompt at bottom |
+| Next handoff | Antigravity T19 — 8-role Sandbox + Pack Detail | Copy prompt at bottom |
 
 ## 2. Phase Status Board
 
@@ -30,9 +30,9 @@
 |---|---|---|---|---:|---|---|
 | P1 — Foundation | T01–T07 | Codex | DONE | 7/7 | Healthy Docker, 5 cat, ≥2 seeded full packs | T07 fresh startup, assets, idempotency and logs PASS. |
 | P2 — APIs / Security | T08–T15 | Codex | DONE | 8/8 | 7 endpoints validated, 15-slot ZIP & CUR tests | T15 Compose, MySQL and cross-endpoint pytest PASS. |
-| P3 — UI / Studio | T16–T22 | Antigravity | IN_PROGRESS | 2/7 | Gallery, Sandbox, Studio, Mix & Share E2E | T16 scaffold & app shell, T17 typed API client & DTOs PASS. |
+| P3 — UI / Studio | T16–T22 | Antigravity | IN_PROGRESS | 3/7 | Gallery, Sandbox, Studio, Mix & Share E2E | T16 scaffold, T17 typed API client, T18 PackCard & GalleryPage live E2E PASS. |
 | P4 — Production | T23–T25 | Both; owner per task | TODO | 0/3 | HTTPS, backup restore, CI, Windows QA, license | Pending |
-| **TOTAL** | **T01–T25** | — | **IN_PROGRESS** | **17/25** | **Release gates all PASS** | **T01–T17 PASS** |
+| **TOTAL** | **T01–T25** | — | **IN_PROGRESS** | **18/25** | **Release gates all PASS** | **T01–T18 PASS** |
 
 **Allowed status:** `TODO`, `IN_PROGRESS`, `BLOCKED`, `IN_REVIEW`, `DONE`, `SKIPPED_WITH_APPROVAL`. No `DONE` unless AC and evidence complete. `SKIPPED_WITH_APPROVAL` must record Product Owner, why, risk and follow-up.
 
@@ -57,6 +57,7 @@
 | T15 | API integration suite | Codex | DONE | 9 integration + 61 hồi quy, Compose và OpenAPI PASS. |
 | T16 | Vite React strict scaffold | Antigravity | DONE | Vite + React 18 + TS strict + Tailwind + Lucide. App Shell, Theme persistence (ccs.theme.v1), responsive (1440/768/375px), npm ci/typecheck/build/browser test PASS. |
 | T17 | API client & DTO | Antigravity | DONE | 7 endpoints typed DTO, 8 roles, custom ApiError, AbortSignal, Blob/FormData, 11 node:test PASS, typecheck strict PASS. |
+| T18 | Gallery / PackCard | Antigravity | DONE | PackCard Hover-to-Test CSS cursor hotspot, GalleryPage API-driven categories, 250ms debounced search, sort, URL sync, Try sticky tester, mobile 375px PASS. |
 | T18 | Gallery / PackCard | Antigravity | TODO | — |
 | T19 | Sandbox / Pack Detail | Antigravity | TODO | — |
 | T20 | Hotspot picker / lazy AI | Antigravity | TODO | — |
@@ -67,6 +68,28 @@
 | T25 | CI / Browser E2E / release | Antigravity + Codex review | TODO | — |
 
 ### 3.1 Active Task Card — copy and update each session
+
+```yaml
+task_id: T18
+task_name: PackCard and API-driven GalleryPage
+agent: Antigravity
+status: DONE
+completed_at: "2026-11-17"
+primary_files:
+  - frontend/src/components/PackCard.tsx
+  - frontend/src/features/gallery/GalleryPage.tsx
+dependencies: [T17]
+commands_run:
+  - npm run typecheck (tsc --noEmit with strict)
+  - npm run build (tsc && vite build)
+  - npx vite --host 127.0.0.1 --port 5173
+  - Live Browser Subagent E2E Verification (Desktop 1440px & Mobile 375px with Docker Compose backend)
+result_summary: Hiện thực hoàn chỉnh component PackCard và trang GalleryPage kết nối API backend thật. Thẻ PackCard hỗ trợ Hover-to-Test pointer CSS cursor chuẩn với hotspot và keyword auto fallback, nhãn tags (Animated/Static, Free/Premium, lượt tải). GalleryPage tải danh mục từ API (/api/v1/categories) hiển thị dạng chips thanh cuộn, tìm kiếm có debounce 250ms tự động hủy request cũ qua AbortController, lọc theo sort (popular/newest), phân trang, đồng bộ hoàn toàn với URL query parameters. Sticky banner thử con trỏ khi bấm nút 'Try'. Kiểm thử trình duyệt thực tế với Docker backend thành công 100%, 0 console error.
+open_blocker: null
+next_task: T19
+```
+
+#### Previous Task Card — T17
 
 ```yaml
 task_id: T17
@@ -819,9 +842,9 @@ Status:
 
 ## 9. Session Handoff — copy for next Agent
 
-**Trạng thái:** Backend API T01–T15 (Phase 1–2) và Frontend T16, T17 (Phase 3) đã PASS. T18 (PackCard and API-driven GalleryPage) là task tiếp theo dành cho Antigravity.
+**Trạng thái:** Backend API T01–T15 (Phase 1–2) và Frontend T16, T17, T18 (Phase 3) đã PASS. T19 (8-role Sandbox + Pack Detail) là task tiếp theo dành cho Antigravity.
 
-### 9.1 Next Session Prompt — Antigravity (T18)
+### 9.1 Next Session Prompt — Antigravity (T19)
 
 ```text
 Bạn đang là Antigravity, Frontend Agent của dự án Custom Cursor Studio & Library.
@@ -829,14 +852,15 @@ Bạn đang là Antigravity, Frontend Agent của dự án Custom Cursor Studio 
 Trước khi code, đọc đủ 6 tài liệu tại root:
 PRD.md, ARCHITECTURE.md, DESIGN.md, RULES.md, TASKS.md, PROGRESS.md.
 
-Task hiện tại: T18 — PackCard and API-driven GalleryPage.
-Primary files: frontend/src/components/PackCard.tsx, frontend/src/features/gallery/GalleryPage.tsx.
+Task hiện tại: T19 — 8-role Sandbox + Pack Detail.
+Primary files: frontend/src/components/InteractiveSandbox.tsx, frontend/src/features/gallery/PackDetailPage.tsx.
 Yêu cầu:
-- Category chips, text search debounce 250ms, sort (popular/newest) và pagination URL sync.
-- Skeleton/empty/error states; responsive cards.
-- Hover-to-Test pointer dạng CSS cursor với hotspot và keyword fallback bắt buộc.
-- Sử dụng typed API client (apiClient.getCategories, apiClient.getPacks) từ T17.
-- Sau khi T18 hoàn thành, DỪNG lại để báo cáo. Không tự động chuyển sang T19.
+- Fetch chi tiết pack theo slug (GET /api/v1/packs/{slug}).
+- Hiển thị 8 con trỏ của pack tương ứng với 8 role.
+- InteractiveSandbox: 8 vùng tương tác độc lập (data-cursor-role), theme Light/Dark độc lập (data-sandbox-theme) không phụ thuộc site theme.
+- Tải gói Windows ZIP qua API download (GET /api/v1/packs/{id}/download).
+- Xử lý 404 cho pack không tồn tại.
+- Sau khi T19 hoàn thành, DỪNG lại để báo cáo. Không tự động chuyển sang T20.
 ```
 
 ### 9.3 End-of-session handoff update template

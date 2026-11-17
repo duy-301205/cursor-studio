@@ -15,6 +15,8 @@ import {
   Terminal,
 } from 'lucide-react';
 
+import { GalleryPage } from './features/gallery/GalleryPage';
+
 type Theme = 'light' | 'dark';
 
 const THEME_STORAGE_KEY = 'ccs.theme.v1';
@@ -225,7 +227,8 @@ export default function App(): React.ReactElement {
       {/* ============================================================ */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         <Routes>
-          <Route path="/" element={<ExplorePlaceholder />} />
+          <Route path="/" element={<GalleryPage />} />
+          <Route path="/packs" element={<GalleryPage />} />
           <Route path="/studio" element={<StudioPlaceholder />} />
           <Route path="/mix" element={<MixPlaceholder />} />
           <Route path="*" element={<NotFoundPlaceholder />} />
@@ -310,68 +313,6 @@ export default function App(): React.ReactElement {
   );
 }
 
-/**
- * Explore / Gallery Structural Placeholder (Target for T18)
- * Displays cleanly organized skeleton wireframes without fake mock data.
- */
-function ExplorePlaceholder(): React.ReactElement {
-  return (
-    <section className="space-y-8 animate-fadeIn">
-      {/* Hero Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-surface border border-line p-6 sm:p-10 shadow-card">
-        <div className="max-w-2xl space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-soft text-brand text-xs font-semibold">
-            <Sparkles className="w-3.5 h-3.5" />
-            Vibe Coding &bull; Phase 3 Scaffold
-          </div>
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-ink leading-tight">
-            Discover &amp; Test Custom Windows Cursors
-          </h1>
-          <p className="text-muted text-base sm:text-lg leading-relaxed">
-            Browse verified community packs, test 8 cursor states in the interactive sandbox, and download standard Windows 15-slot quick-install packages.
-          </p>
-        </div>
-      </div>
-
-      {/* Structural Wireframe Placeholder for Filters & Cards (T18) */}
-      <div className="p-6 sm:p-8 rounded-2xl border-2 border-dashed border-line bg-raised/50 space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-line">
-          <div>
-            <h3 className="text-lg font-bold text-ink">Gallery Feed Container</h3>
-            <p className="text-xs text-muted">Scheduled for Task T18 (PackCard &amp; Gallery API integration)</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="px-3 py-1 rounded-lg bg-surface border border-line text-xs font-mono text-muted">
-              Filter Bar Slot
-            </span>
-            <span className="px-3 py-1 rounded-lg bg-surface border border-line text-xs font-mono text-muted">
-              Search Slot
-            </span>
-          </div>
-        </div>
-
-        {/* Structural Grid Placeholders */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3].map((item) => (
-            <div
-              key={item}
-              className="rounded-xl border border-line bg-surface p-5 space-y-4 shadow-sm"
-            >
-              <div className="w-full aspect-[4/3] rounded-lg bg-raised flex flex-col items-center justify-center gap-2 text-muted">
-                <MousePointer className="w-8 h-8 opacity-40" />
-                <span className="text-xs font-mono">Pack Card Slot #{item}</span>
-              </div>
-              <div className="space-y-2">
-                <div className="h-4 bg-raised rounded w-3/4" />
-                <div className="h-3 bg-raised rounded w-1/2" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
 
 /**
  * Studio Structural Placeholder (Target for T20–T21)

@@ -271,10 +271,10 @@ The linear ordering above is the recommended solo workflow, not an excuse to wai
 - **Primary files:** `frontend/src/components/PackCard.tsx`, `frontend/src/features/gallery/GalleryPage.tsx`.
 - **Technical work:** categories chips, text search debounce 250ms, sort and pagination URL sync, skeleton/empty/error, responsive cards; Hover-to-Test `pointer` as CSS cursor with hotspot and native fallback; keyboard/touch alternative.
 - **Acceptance criteria:**
-  - [ ] Category and search filter data from API, not hardcoded packs.
-  - [ ] `cursor: url(...) x y, auto` only on card test zone; broken URLs do not block navigation.
-  - [ ] Browser back/forward restores q/category/sort/page; abort stale search.
-  - [ ] Keyboard enter/focus and mobile Try action usable; both themes visually correct.
+  - [x] Category and search filter data from API, not hardcoded packs.
+  - [x] `cursor: url(...) x y, auto` only on card test zone; broken URLs do not block navigation.
+  - [x] Browser back/forward restores q/category/sort/page; abort stale search.
+  - [x] Keyboard enter/focus and mobile Try action usable; both themes visually correct.
 - **Evidence:** demo hover/focus + Network requests + mobile screenshot.
 
 ### T19 — 8-role Sandbox + Pack Detail

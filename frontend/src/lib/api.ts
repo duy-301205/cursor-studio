@@ -104,7 +104,17 @@ export function buildApiUrl(
 ): string {
   const base = getApiBaseUrl();
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
-  const url = new URL(`${base}${cleanPath}`);
+  const fullPath = `${base}${cleanPath}`;
+
+  const origin =
+    typeof window !== 'undefined' && window.location?.origin
+      ? window.location.origin
+      : 'http://localhost:5173';
+
+  const url =
+    fullPath.startsWith('http://') || fullPath.startsWith('https://')
+      ? new URL(fullPath)
+      : new URL(fullPath, origin);
 
   if (searchParams) {
     for (const [key, value] of Object.entries(searchParams)) {

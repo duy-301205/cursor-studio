@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 
 import { GalleryPage } from './features/gallery/GalleryPage';
+import { PackDetailPage } from './features/gallery/PackDetailPage';
 
 type Theme = 'light' | 'dark';
 
@@ -229,6 +230,8 @@ export default function App(): React.ReactElement {
         <Routes>
           <Route path="/" element={<GalleryPage />} />
           <Route path="/packs" element={<GalleryPage />} />
+          <Route path="/packs/:slug" element={<PackDetailPage />} />
+          <Route path="/pack/:slug" element={<PackDetailPage />} />
           <Route path="/studio" element={<StudioPlaceholder />} />
           <Route path="/mix" element={<MixPlaceholder />} />
           <Route path="*" element={<NotFoundPlaceholder />} />

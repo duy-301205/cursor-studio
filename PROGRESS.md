@@ -3,7 +3,7 @@
 > **Project:** Custom Cursor Studio & Library | **Tracking schema:** v1.0  
 > **Last updated:** 2026-11-17 | **Status:** IN_PROGRESS
 >
-> **Current phase:** P3 — UI / Studio | **Next task:** T19
+> **Current phase:** P3 — UI / Studio | **Next task:** T20
 >
 > **Important:** Trạng thái bên dưới là template ban đầu; **không** có task kỹ thuật nào được đánh dấu PASS trước khi Agent thực sự chạy code/test.
 
@@ -13,16 +13,16 @@
 |---|---|---|
 | Overall status | `IN_PROGRESS` | `NOT_STARTED / IN_PROGRESS / BLOCKED / RELEASE_READY / RELEASED` |
 | Active Phase | P3 — UI / Studio | Đổi khi phase gate pass |
-| Active Task | `T19` — 8-role Sandbox + Pack Detail (TODO, Antigravity) | Một task primary tại một thời điểm |
+| Active Task | `T20` — Hotspot picker and lazy AI module (TODO, Antigravity) | Một task primary tại một thời điểm |
 | Backend Owner | Codex | Owner changes require explicit agreement |
 | Frontend Owner | Antigravity | Start after API shape confirmed |
 | Target stack | Python 3.12, FastAPI, MySQL 8.0, React 18, Vite, TS strict | Change via CR |
 | P0 scope | 7 endpoints, 8 product roles, 15 Windows slots | Do not silently expand |
 | Latest passing build | Vite 5.4.21 React 18 TS build (`dist/`), `ccs-backend:t15-dev` | Command + evidence |
-| Latest passing tests | T18, 2026-11-17. Live Browser E2E verification với Docker backend thực tế (real categories & packs, hover-to-test cursor, category filter, 250ms debounced search, sort, sticky Try banner, mobile 375px responsive, 0 console errors) PASS. npm run typecheck & build PASS. | Count + command + date |
+| Latest passing tests | T19, 2026-11-17. Live Browser E2E verification với Docker backend thực tế (PackDetailPage 8 roles, InteractiveSandbox 8 zones [data-cursor-role], independent sandbox theme [data-sandbox-theme], real Windows ZIP download /api/v1/packs/2/download, 4-step install guide, 404 not found handler, responsive 375px, 0 console errors) PASS. | Count + command + date |
 | Latest release decision | `NO-GO — not implemented` | Gate-based, not intuition |
 | Known blockers | License review, future Windows VM validation | Assign before launch |
-| Next handoff | Antigravity T19 — 8-role Sandbox + Pack Detail | Copy prompt at bottom |
+| Next handoff | Antigravity T20 — Hotspot picker and lazy AI module | Copy prompt at bottom |
 
 ## 2. Phase Status Board
 
@@ -30,9 +30,9 @@
 |---|---|---|---|---:|---|---|
 | P1 — Foundation | T01–T07 | Codex | DONE | 7/7 | Healthy Docker, 5 cat, ≥2 seeded full packs | T07 fresh startup, assets, idempotency and logs PASS. |
 | P2 — APIs / Security | T08–T15 | Codex | DONE | 8/8 | 7 endpoints validated, 15-slot ZIP & CUR tests | T15 Compose, MySQL and cross-endpoint pytest PASS. |
-| P3 — UI / Studio | T16–T22 | Antigravity | IN_PROGRESS | 3/7 | Gallery, Sandbox, Studio, Mix & Share E2E | T16 scaffold, T17 typed API client, T18 PackCard & GalleryPage live E2E PASS. |
+| P3 — UI / Studio | T16–T22 | Antigravity | IN_PROGRESS | 4/7 | Gallery, Sandbox, Studio, Mix & Share E2E | T16 scaffold, T17 typed client, T18 GalleryPage, T19 Sandbox & Detail live PASS. |
 | P4 — Production | T23–T25 | Both; owner per task | TODO | 0/3 | HTTPS, backup restore, CI, Windows QA, license | Pending |
-| **TOTAL** | **T01–T25** | — | **IN_PROGRESS** | **18/25** | **Release gates all PASS** | **T01–T18 PASS** |
+| **TOTAL** | **T01–T25** | — | **IN_PROGRESS** | **19/25** | **Release gates all PASS** | **T01–T19 PASS** |
 
 **Allowed status:** `TODO`, `IN_PROGRESS`, `BLOCKED`, `IN_REVIEW`, `DONE`, `SKIPPED_WITH_APPROVAL`. No `DONE` unless AC and evidence complete. `SKIPPED_WITH_APPROVAL` must record Product Owner, why, risk and follow-up.
 
@@ -58,8 +58,7 @@
 | T16 | Vite React strict scaffold | Antigravity | DONE | Vite + React 18 + TS strict + Tailwind + Lucide. App Shell, Theme persistence (ccs.theme.v1), responsive (1440/768/375px), npm ci/typecheck/build/browser test PASS. |
 | T17 | API client & DTO | Antigravity | DONE | 7 endpoints typed DTO, 8 roles, custom ApiError, AbortSignal, Blob/FormData, 11 node:test PASS, typecheck strict PASS. |
 | T18 | Gallery / PackCard | Antigravity | DONE | PackCard Hover-to-Test CSS cursor hotspot, GalleryPage API-driven categories, 250ms debounced search, sort, URL sync, Try sticky tester, mobile 375px PASS. |
-| T18 | Gallery / PackCard | Antigravity | TODO | — |
-| T19 | Sandbox / Pack Detail | Antigravity | TODO | — |
+| T19 | Sandbox / Pack Detail | Antigravity | DONE | PackDetailPage 8 roles fetch, InteractiveSandbox 8 zones, independent sandbox theme (data-sandbox-theme), real backend ZIP download, 404 handling, 4-step install guide PASS. |
 | T20 | Hotspot picker / lazy AI | Antigravity | TODO | — |
 | T21 | Studio Canvas / Export | Antigravity | TODO | — |
 | T22 | MixDock / Mix page / share | Antigravity | TODO | — |
@@ -68,6 +67,28 @@
 | T25 | CI / Browser E2E / release | Antigravity + Codex review | TODO | — |
 
 ### 3.1 Active Task Card — copy and update each session
+
+```yaml
+task_id: T19
+task_name: 8-role Sandbox + Pack Detail
+agent: Antigravity
+status: DONE
+completed_at: "2026-11-17"
+primary_files:
+  - frontend/src/components/InteractiveSandbox.tsx
+  - frontend/src/features/gallery/PackDetailPage.tsx
+dependencies: [T18]
+commands_run:
+  - npm run typecheck (tsc --noEmit with strict)
+  - npm run build (tsc && vite build)
+  - npx vite --host 127.0.0.1 --port 5173
+  - Live Browser Subagent E2E Verification (PackDetailPage, 8 roles, InteractiveSandbox [data-cursor-role], independent sandbox theme [data-sandbox-theme], real ZIP download, 4-step Windows install guide, 404 handler)
+result_summary: Hiện thực hoàn chỉnh component InteractiveSandbox với 8 vùng tương tác mô phỏng Windows desktop độc lập ([data-cursor-role="pointer|link|text|busy|working|precision|unavailable|move"]) kèm fallback keywords bắt buộc theo F02. Chế độ Light/Dark của Sandbox (data-sandbox-theme) hoàn toàn độc lập với website theme. Trang PackDetailPage tải chi tiết 8 role theo slug, hiển thị lưới 8 item con trỏ kèm Registry slots và tọa độ hotspot chuẩn. Tích hợp nút 'Download Windows Pack' tải file ZIP thực tế từ backend (/api/v1/packs/{id}/download), xử lý các mã lỗi 404/409/502/429. Hướng dẫn cài đặt 4 bước chuẩn INF trên Windows 10 & 11 kèm thông điệp minh bạch về giới hạn bảo mật trình duyệt. Xử lý trang 404 cho slug không tồn tại. Kiểm thử trình duyệt và E2E với Docker backend đạt 100% PASS, 0 console error.
+open_blocker: null
+next_task: T20
+```
+
+#### Previous Task Card — T18
 
 ```yaml
 task_id: T18
@@ -842,9 +863,9 @@ Status:
 
 ## 9. Session Handoff — copy for next Agent
 
-**Trạng thái:** Backend API T01–T15 (Phase 1–2) và Frontend T16, T17, T18 (Phase 3) đã PASS. T19 (8-role Sandbox + Pack Detail) là task tiếp theo dành cho Antigravity.
+**Trạng thái:** Backend API T01–T15 (Phase 1–2) và Frontend T16, T17, T18, T19 (Phase 3) đã PASS. T20 (Hotspot picker / lazy AI) là task tiếp theo dành cho Antigravity.
 
-### 9.1 Next Session Prompt — Antigravity (T19)
+### 9.1 Next Session Prompt — Antigravity (T20)
 
 ```text
 Bạn đang là Antigravity, Frontend Agent của dự án Custom Cursor Studio & Library.
@@ -852,15 +873,13 @@ Bạn đang là Antigravity, Frontend Agent của dự án Custom Cursor Studio 
 Trước khi code, đọc đủ 6 tài liệu tại root:
 PRD.md, ARCHITECTURE.md, DESIGN.md, RULES.md, TASKS.md, PROGRESS.md.
 
-Task hiện tại: T19 — 8-role Sandbox + Pack Detail.
-Primary files: frontend/src/components/InteractiveSandbox.tsx, frontend/src/features/gallery/PackDetailPage.tsx.
+Task hiện tại: T20 — Hotspot picker and lazy AI module.
+Primary files: frontend/src/components/HotspotGridPicker.tsx, frontend/src/features/studio/backgroundRemoval.ts.
 Yêu cầu:
-- Fetch chi tiết pack theo slug (GET /api/v1/packs/{slug}).
-- Hiển thị 8 con trỏ của pack tương ứng với 8 role.
-- InteractiveSandbox: 8 vùng tương tác độc lập (data-cursor-role), theme Light/Dark độc lập (data-sandbox-theme) không phụ thuộc site theme.
-- Tải gói Windows ZIP qua API download (GET /api/v1/packs/{id}/download).
-- Xử lý 404 cho pack không tồn tại.
-- Sau khi T19 hoàn thành, DỪNG lại để báo cáo. Không tự động chuyển sang T20.
+- HotspotGridPicker: lưới phóng to 32/48 checkerboard, crosshair đỏ, pixel math click chính xác (clamp [0, size-1]), hỗ trợ bàn phím mũi tên và nhập số.
+- backgroundRemoval.ts: dynamic lazy import thư viện tách nền (@imgly/background-removal), không load khi vào homepage/gallery, hỗ trợ skip/fallback khi không có WebAssembly/model lỗi.
+- Đảm bảo strict typecheck và test unit toán tọa độ.
+- Sau khi T20 hoàn thành, DỪNG lại để báo cáo. Không tự động chuyển sang T21.
 ```
 
 ### 9.3 End-of-session handoff update template

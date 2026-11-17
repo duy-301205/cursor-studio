@@ -283,10 +283,10 @@ The linear ordering above is the recommended solo workflow, not an excuse to wai
 - **Primary files:** `frontend/src/components/InteractiveSandbox.tsx`, `frontend/src/features/gallery/PackDetailPage.tsx`.
 - **Technical work:** detail fetch by slug, 8 item cards, independent sandbox Light/Dark, 8 zones with `data-cursor-role`, dynamic CSS hotspots/fallback keywords, source `.ani` web preview downgrade; ZIP Download button from API, authentic install guide.
 - **Acceptance criteria:**
-  - [ ] Eight roles displayed and mapped to unique DOM zones; site theme unchanged by sandbox switch.
-  - [ ] All CSS cursors have fallback, no global `body` override; thumbnails 32/48px.
-  - [ ] Download ZIP clicks actual backend and shows error when 409/502.
-  - [ ] Missing pack 404 handled; animated source not falsely displayed as native `.ani` CSS.
+  - [x] Eight roles displayed and mapped to unique DOM zones; site theme unchanged by sandbox switch.
+  - [x] All CSS cursors have fallback, no global `body` override; thumbnails 32/48px.
+  - [x] Download ZIP clicks actual backend and shows error when 409/502.
+  - [x] Missing pack 404 handled; animated source not falsely displayed as native `.ani` CSS.
 - **Evidence:** screenshot Light Sandbox on Dark site and reverse, downloaded ZIP manifest.
 
 ### T20 — Hotspot grid and lazy AI module

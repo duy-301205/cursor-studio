@@ -115,10 +115,10 @@ The linear ordering above is the recommended solo workflow, not an excuse to wai
 - **Primary files:** `backend/app/services/cur_encoder.py`, `backend/tests/test_cur_encoder.py`.
 - **Technical work:** Pillow RGBA contain resize, exif normalization, 32-bit BGRA XOR bottom-up, AND mask padding to DWORD, CUR ICONDIR/ICONDIRENTRY with hotspots. Unit tests with transparent circles and corner cases.
 - **Acceptance criteria:**
-  - [ ] 32px (0,0), 32px (31,31), 48px (47,47) encode correctly.
-  - [ ] Prefix bytes `00 00 02 00`, correct byte offsets/entry length; DIB biHeight double size.
-  - [ ] Alpha transparency retained, image not stretched; invalid size/hotspot raise exception.
-  - [ ] `pytest backend/tests/test_cur_encoder.py -q` passes, no external `win2xcur` dependency.
+  - [x] 32px (0,0), 32px (31,31), 48px (47,47) encode correctly.
+  - [x] Prefix bytes `00 00 02 00`, correct byte offsets/entry length; DIB biHeight double size.
+  - [x] Alpha transparency retained, image not stretched; invalid size/hotspot raise exception.
+  - [x] `pytest backend/tests/test_cur_encoder.py -q` passes, no external `win2xcur` dependency.
 - **Evidence:** test stdout + inspected header hex.
 
 ### T07 — Auto-seed + app lifespan/health/static
@@ -127,10 +127,10 @@ The linear ordering above is the recommended solo workflow, not an excuse to wai
 - **Primary files:** `backend/app/db/seed.py`, `backend/app/main.py`.
 - **Technical work:** dev-only `create_all` in lifespan; idempotent upsert 5 categories, 2+ theme packs, PNG alpha + CUR 8 roles each via T06, files `app/static/samples`; enable `/health/live`, `/health/ready`, `/static/samples`; include scaffolded catalog/studio routers if present (otherwise route mounting added explicitly in T09/T11 through sanctioned small follow-up edit).
 - **Acceptance criteria:**
-  - [ ] Fresh DB boots and `GET /health/ready` returns 200.
-  - [ ] Categories count exactly 5; ≥2 published packs each have precisely 8 distinct roles and working file URLs.
-  - [ ] Restart twice creates no duplicate rows or redundant file changes.
-  - [ ] `APP_ENV=production` does not run dev seed/create_all; `/docs` works in dev.
+  - [x] Fresh DB boots and `GET /health/ready` returns 200.
+  - [x] Categories count exactly 5; ≥2 published packs each have precisely 8 distinct roles and working file URLs.
+  - [x] Restart twice creates no duplicate rows or redundant file changes.
+  - [x] `APP_ENV=production` does not run dev seed/create_all; `/docs` works in dev.
 - **Evidence:** Docker logs, DB count SQL, `curl -I` preview asset.
 
 ---

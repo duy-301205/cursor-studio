@@ -3,7 +3,7 @@
 > **Project:** Custom Cursor Studio & Library | **Tracking schema:** v1.0  
 > **Last updated:** 2026-11-17 | **Status:** IN_PROGRESS
 >
-> **Current phase:** P1 — Foundation | **Next task:** T06
+> **Current phase:** P2 — APIs / Security | **Next task:** T08
 >
 > **Important:** Trạng thái bên dưới là template ban đầu; **không** có task kỹ thuật nào được đánh dấu PASS trước khi Agent thực sự chạy code/test.
 
@@ -12,27 +12,27 @@
 | Field | Current value | Update rule |
 |---|---|---|
 | Overall status | `IN_PROGRESS` | `NOT_STARTED / IN_PROGRESS / BLOCKED / RELEASE_READY / RELEASED` |
-| Active Phase | P1 — Docker-First Foundation | Đổi khi phase gate pass |
-| Active Task | `T06` — CUR binary encoder & tests (TODO) | Một task primary tại một thời điểm |
+| Active Phase | P2 — APIs / Security | Đổi khi phase gate pass |
+| Active Task | `T08` — Alembic migration (TODO) | Một task primary tại một thời điểm |
 | Backend Owner | Codex | Owner changes require explicit agreement |
 | Frontend Owner | Antigravity | Start after API shape confirmed |
 | Target stack | Python 3.12, FastAPI, MySQL 8.0, React 18, Vite, TS strict | Change via CR |
 | P0 scope | 7 endpoints, 8 product roles, 15 Windows slots | Do not silently expand |
-| Latest passing build | `ccs-backend:t05-dev`, Docker Desktop Linux/amd64 | Command + evidence |
-| Latest passing tests | T05, 2026-11-17. MySQL DDL compile, bốn bảng trong metadata, tám giá trị enum, Ruff và mypy. | Count + command + date |
+| Latest passing build | `ccs-backend:t07-dev` và `ccs-backend:t07-prod`, Docker Desktop Linux/amd64 | Command + evidence |
+| Latest passing tests | T07, 2026-11-17. MySQL mới, 34 asset URLs, restart hai lần, readiness 503/recovery và production read-only. | Count + command + date |
 | Latest release decision | `NO-GO — not implemented` | Gate-based, not intuition |
 | Known blockers | License review, future Windows VM validation | Assign before launch |
-| Next handoff | Give Codex T06 | Copy prompt at bottom |
+| Next handoff | Give Codex T08 | Copy prompt at bottom |
 
 ## 2. Phase Status Board
 
 | Phase | Tasks | Owner | Status | Done / Total | Exit criteria | Proof |
 |---|---|---|---|---:|---|---|
-| P1 — Foundation | T01–T07 | Codex | IN_PROGRESS | 5/7 | Healthy Docker, 5 cat, ≥2 seeded full packs | T01–T05 PASS. Phase gate pending. |
+| P1 — Foundation | T01–T07 | Codex | DONE | 7/7 | Healthy Docker, 5 cat, ≥2 seeded full packs | T07 fresh startup, assets, idempotency and logs PASS. |
 | P2 — APIs / Security | T08–T15 | Codex | TODO | 0/8 | 7 endpoints validated, 15-slot ZIP & CUR tests | Pending |
 | P3 — UI / Studio | T16–T22 | Antigravity | TODO | 0/7 | Gallery, Sandbox, Studio, Mix & Share E2E | Pending |
 | P4 — Production | T23–T25 | Both; owner per task | TODO | 0/3 | HTTPS, backup restore, CI, Windows QA, license | Pending |
-| **TOTAL** | **T01–T25** | — | **IN_PROGRESS** | **5/25** | **Release gates all PASS** | **T01–T05 PASS** |
+| **TOTAL** | **T01–T25** | — | **IN_PROGRESS** | **7/25** | **Release gates all PASS** | **T01–T07 PASS** |
 
 **Allowed status:** `TODO`, `IN_PROGRESS`, `BLOCKED`, `IN_REVIEW`, `DONE`, `SKIPPED_WITH_APPROVAL`. No `DONE` unless AC and evidence complete. `SKIPPED_WITH_APPROVAL` must record Product Owner, why, risk and follow-up.
 
@@ -45,8 +45,8 @@
 | T03 | Config & AsyncSession | Codex | DONE | Hai image rebuild, MySQL SELECT 1 và vòng đời session PASS. Production startup lỗi đúng khi thiếu cấu hình. |
 | T04 | Category / pack models | Codex | DONE | Metadata và DDL MySQL đối chiếu với DDL chuẩn, Ruff và mypy PASS. |
 | T05 | Cursor item / share models | Codex | DONE | Bốn bảng trong metadata, tám role, DDL MySQL, Ruff và mypy PASS. |
-| T06 | CUR binary encoder & tests | Codex | TODO | — |
-| T07 | Auto-seed, lifespan, health | Codex | TODO | — |
+| T06 | CUR binary encoder & tests | Codex | DONE | 17 pytest PASS. Win32 nạp ba CUR và trả đúng hotspot. |
+| T07 | Auto-seed, lifespan, health | Codex | DONE | Fresh MySQL, 5 categories, 2 packs × 8 roles, assets and restart checks PASS. |
 | T08 | Alembic migration | Codex | TODO | — |
 | T09 | Gallery schemas/categories/packs APIs | Codex | TODO | — |
 | T10 | Trusted asset storage adapter | Codex | TODO | — |
@@ -67,6 +67,63 @@
 | T25 | CI / Browser E2E / release | Antigravity + Codex review | TODO | — |
 
 ### 3.1 Active Task Card — copy and update each session
+
+```yaml
+task_id: T07
+task_name: Auto-seed, app lifespan, health and static samples
+agent: Codex
+status: DONE
+completed_at: "2026-11-17"
+primary_files:
+  - backend/app/db/seed.py
+  - backend/app/main.py
+dependencies: [T02, T03, T04, T05, T06]
+commands_run:
+  - docker build --target development -t ccs-backend:t07-dev ./backend
+  - docker run --rm --entrypoint python ccs-backend:t07-dev -m ruff check app
+  - docker run --rm --entrypoint python ccs-backend:t07-dev -m ruff format --check app
+  - docker run --rm --entrypoint python ccs-backend:t07-dev -m mypy app
+  - docker compose up --build -d --wait --wait-timeout 150
+  - docker compose exec -T backend python - (SQL queries and HTTP GET/HEAD byte checks)
+  - docker compose restart backend (twice)
+  - docker compose stop db
+  - docker compose up -d --wait --wait-timeout 150 db
+  - docker compose logs --no-color --tail 10 backend
+  - docker build --target production -t ccs-backend:t07-prod ./backend
+  - docker run -d --read-only --network <test-network> --env-file <temp-prod-env> ccs-backend:t07-prod
+  - docker exec -i <prod-container> python - (HTTP checks and SHOW TABLES)
+result_summary: Compose chạy trên bản sao source và volume mới. MySQL có 5 categories, 2 pack published với đủ 8 role mỗi pack. 34 URL qua HEAD/GET và đọc binary. Hai lần restart giữ nguyên ID, timestamps và mtime. Khi MySQL dừng, live 200 và ready 503; ready trở lại 200 khi DB hoạt động. Production read-only chạy với DB mới vẫn không có bảng và sample routes trả 404.
+open_blocker: null
+next_task: T08
+```
+
+#### Previous Task Card — T06
+
+```yaml
+task_id: T06
+task_name: Binary CUR encoder and unit tests
+agent: Codex
+status: DONE
+completed_at: "2026-11-17"
+primary_files:
+  - backend/app/services/cur_encoder.py
+  - backend/tests/test_cur_encoder.py
+dependencies: [T03]
+commands_run:
+  - docker build --target development -t ccs-backend:t06-dev ./backend
+  - python -m pytest tests/test_cur_encoder.py -q
+  - python -m ruff check app tests
+  - python -m ruff format --check app tests
+  - python -m mypy app tests
+  - python -c "<encode 48px CUR and print the first 22 bytes>"
+  - python - "<Win32 LoadImageW and GetIconInfo smoke check>"
+result_summary: 17 ca pytest và kiểm tra tĩnh PASS trong image dev. Win32 nạp CUR 32px (0,0), 32px (31,31) và 48px (47,47). Các file Win32 sinh tạm. Chưa kiểm tra hiển thị thủ công.
+header_48px_47_47: "00 00 02 00 01 00 30 30 00 00 2f 00 2f 00 a8 25 00 00 16 00 00 00"
+open_blocker: null
+next_task: T07
+```
+
+#### Previous Task Card — T05
 
 ```yaml
 task_id: T05
@@ -225,6 +282,8 @@ next_task: T02
 | 2026-11-17 | Codex | T03 | Sau khi được duyệt, nối FastAPI lifespan và khóa cryptography cho hai image. Giữ nguyên phiên bản dependency cũ. MySQL thật, ASGI startup/shutdown, log production và lint/typecheck PASS. | `backend/app/main.py`, `backend/pyproject.toml`, hai lockfile, `TASKS.md`, `PROGRESS.md` | PASS | — | T04 |
 | 2026-11-17 | Codex | T04 | Đối chiếu metadata và DDL MySQL của hai model với schema chuẩn. Ruff, format và mypy PASS. | `backend/app/models/category.py`, `backend/app/models/cursor_pack.py`, `TASKS.md`, `PROGRESS.md` | PASS | — | T05 |
 | 2026-11-17 | Codex | T05 | Ruff yêu cầu ngắt dòng import SQLAlchemy. Đã chỉnh và chạy lại build, Ruff, format, mypy, metadata và DDL MySQL. | `backend/app/models/cursor_item.py`, `backend/app/models/custom_creation.py`, `TASKS.md`, `PROGRESS.md` | PASS | — | T06 |
+| 2026-11-17 | Codex | T06 | Đã sửa lỗi typecheck trong bài test alpha và chạy lại. 17 pytest, Ruff, mypy, hex header và Win32 hotspot PASS. | `backend/app/services/cur_encoder.py`, `backend/tests/test_cur_encoder.py`, `TASKS.md`, `PROGRESS.md` | PASS | — | T07 |
+| 2026-11-17 | Codex | T07 | Sửa kiểu Table cho mypy và MIME WebP cho StaticFiles. Fresh Compose, 34 URL, hai lượt restart, health khi DB dừng và production read-only PASS. | `backend/app/db/seed.py`, `backend/app/main.py`, `TASKS.md`, `PROGRESS.md` | PASS | — | T08 |
 
 **Append rule:** không sửa lịch sử kết quả cũ thành PASS; nếu retry, thêm dòng mới với cause/fix. Link logs phải được sanitize secrets.
 
@@ -237,9 +296,9 @@ next_task: T02
 - [x] T03 — typed settings + async DB session.
 - [x] T04 — Category, cursor pack models.
 - [x] T05 — Cursor item, custom creation models.
-- [ ] T06 — binary CUR encoder + tests.
-- [ ] T07 — lifespan auto-seed + 5 categories/2 packs/8 roles + health check.
-- [ ] Phase gate P1: fresh clone test / idempotency / check logs.
+- [x] T06 — binary CUR encoder + tests.
+- [x] T07 — lifespan auto-seed + 5 categories/2 packs/8 roles + health check.
+- [x] Phase gate P1: fresh clone test / idempotency / check logs.
 
 **Rules for sprint updates:** mỗi phiên chỉ tick những mục đã có bằng chứng. Nếu phát hiện việc ngoài scope, ghi Proposed Task/CR, không mở rộng Txx.
 
@@ -420,7 +479,7 @@ Status:
 
 ## 9. Session Handoff — copy for next Agent
 
-**Trạng thái:** T01–T05 PASS trên Docker Desktop Linux/amd64. T06 đang chờ giao việc.
+**Trạng thái:** T01–T07 và phase gate P1 PASS trên Docker Desktop Linux/amd64. T08 đang chờ giao việc.
 
 ### 9.1 Next Session Prompt — Codex (ready to copy)
 
@@ -430,8 +489,8 @@ Bạn đang là Codex, Backend Agent của dự án Custom Cursor Studio & Libra
 Trước khi code, đọc đủ 6 tài liệu tại root:
 PRD.md, ARCHITECTURE.md, DESIGN.md, RULES.md, TASKS.md, PROGRESS.md.
 
-T05 đã PASS. Khi được giao T06, đọc phạm vi và tiêu chí nghiệm thu
-trong TASKS.md và đặc tả CUR trong ARCHITECTURE.md.
+T07 đã PASS. Khi được giao T08, đọc phạm vi và tiêu chí nghiệm thu
+trong TASKS.md và đối chiếu DDL MySQL trong ARCHITECTURE.md.
 ```
 
 ### 9.2 Next Session Prompt — Antigravity (use only after backend readiness)

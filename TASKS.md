@@ -169,10 +169,10 @@ The linear ordering above is the recommended solo workflow, not an excuse to wai
 - **Primary files:** `backend/app/services/storage.py`, `backend/tests/test_storage.py`.
 - **Technical work:** local vs R2 adapter, strip only configured CDN prefix to known bucket key, local path resolution under static root; max asset bytes; no HTTP arbitrary remote fetch; async or bounded threadpool calls.
 - **Acceptance criteria:**
-  - [ ] Read existing sample .cur by validated URL/key works.
-  - [ ] Reject external domain, `../`, `%2e%2e`, symlink escape and oversized file.
-  - [ ] R2 secrets never returned in URL/log; file read timeout maps to storage error.
-  - [ ] Tests pass without real R2 credentials (mocked adapter).
+  - [x] Read existing sample .cur by validated URL/key works.
+  - [x] Reject external domain, `../`, `%2e%2e`, symlink escape and oversized file.
+  - [x] R2 secrets never returned in URL/log; file read timeout maps to storage error.
+  - [x] Tests pass without real R2 credentials (mocked adapter).
 - **Evidence:** test_storage suite + negative tests.
 
 ### T11 — Studio convert API and request schema

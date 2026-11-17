@@ -3,7 +3,7 @@
 > **Project:** Custom Cursor Studio & Library | **Tracking schema:** v1.0  
 > **Last updated:** 2026-11-17 | **Status:** IN_PROGRESS
 >
-> **Current phase:** P2 — APIs / Security | **Next task:** T11
+> **Current phase:** P3 — UI / Studio | **Next task:** T16
 >
 > **Important:** Trạng thái bên dưới là template ban đầu; **không** có task kỹ thuật nào được đánh dấu PASS trước khi Agent thực sự chạy code/test.
 
@@ -12,27 +12,27 @@
 | Field | Current value | Update rule |
 |---|---|---|
 | Overall status | `IN_PROGRESS` | `NOT_STARTED / IN_PROGRESS / BLOCKED / RELEASE_READY / RELEASED` |
-| Active Phase | P2 — APIs / Security | Đổi khi phase gate pass |
-| Active Task | `T11` — Studio convert API (TODO) | Một task primary tại một thời điểm |
+| Active Phase | P3 — UI / Studio | Đổi khi phase gate pass |
+| Active Task | `T16` — Vite React strict scaffold (TODO, Antigravity) | Một task primary tại một thời điểm |
 | Backend Owner | Codex | Owner changes require explicit agreement |
 | Frontend Owner | Antigravity | Start after API shape confirmed |
 | Target stack | Python 3.12, FastAPI, MySQL 8.0, React 18, Vite, TS strict | Change via CR |
 | P0 scope | 7 endpoints, 8 product roles, 15 Windows slots | Do not silently expand |
-| Latest passing build | `ccs-backend:t10-dev`, Docker Desktop Linux/amd64 | Command + evidence |
-| Latest passing tests | T10, 2026-11-17. 25 test storage, 17 test CUR, đọc asset seed T07, Ruff và mypy. | Count + command + date |
+| Latest passing build | `ccs-backend:t15-dev`, Docker Desktop Linux/amd64 | Command + evidence |
+| Latest passing tests | T15, 2026-11-17. 70 pytest trên Docker Compose và MySQL tạm. Ruff, mypy và OpenAPI PASS. | Count + command + date |
 | Latest release decision | `NO-GO — not implemented` | Gate-based, not intuition |
 | Known blockers | License review, future Windows VM validation | Assign before launch |
-| Next handoff | Give Codex T11 | Copy prompt at bottom |
+| Next handoff | Give Antigravity T16 | Copy prompt at bottom |
 
 ## 2. Phase Status Board
 
 | Phase | Tasks | Owner | Status | Done / Total | Exit criteria | Proof |
 |---|---|---|---|---:|---|---|
 | P1 — Foundation | T01–T07 | Codex | DONE | 7/7 | Healthy Docker, 5 cat, ≥2 seeded full packs | T07 fresh startup, assets, idempotency and logs PASS. |
-| P2 — APIs / Security | T08–T15 | Codex | IN_PROGRESS | 3/8 | 7 endpoints validated, 15-slot ZIP & CUR tests | T08–T10 PASS. Phase gate pending. |
+| P2 — APIs / Security | T08–T15 | Codex | DONE | 8/8 | 7 endpoints validated, 15-slot ZIP & CUR tests | T15 Compose, MySQL and cross-endpoint pytest PASS. |
 | P3 — UI / Studio | T16–T22 | Antigravity | TODO | 0/7 | Gallery, Sandbox, Studio, Mix & Share E2E | Pending |
 | P4 — Production | T23–T25 | Both; owner per task | TODO | 0/3 | HTTPS, backup restore, CI, Windows QA, license | Pending |
-| **TOTAL** | **T01–T25** | — | **IN_PROGRESS** | **10/25** | **Release gates all PASS** | **T01–T10 PASS** |
+| **TOTAL** | **T01–T25** | — | **IN_PROGRESS** | **15/25** | **Release gates all PASS** | **T01–T15 PASS** |
 
 **Allowed status:** `TODO`, `IN_PROGRESS`, `BLOCKED`, `IN_REVIEW`, `DONE`, `SKIPPED_WITH_APPROVAL`. No `DONE` unless AC and evidence complete. `SKIPPED_WITH_APPROVAL` must record Product Owner, why, risk and follow-up.
 
@@ -50,11 +50,11 @@
 | T08 | Alembic migration | Codex | DONE | Upgrade/current/downgrade, DDL và ràng buộc MySQL PASS. |
 | T09 | Gallery schemas/categories/packs APIs | Codex | DONE | Ba route và OpenAPI qua app.main:app, SQL count 1/2/2 và health/lifespan PASS. |
 | T10 | Trusted asset storage adapter | Codex | DONE | 25 ca storage PASS, CUR seed đọc được, R2 SDK giả lập. |
-| T11 | Studio convert API | Codex | TODO | — |
-| T12 | 15-slot Install.inf builder | Codex | TODO | — |
-| T13 | RAM ZIP packager / download API | Codex | TODO | — |
-| T14 | Share service / endpoints | Codex | TODO | — |
-| T15 | API integration suite | Codex | TODO | — |
+| T11 | Studio convert API | Codex | DONE | Multipart, CUR, 413/415/422/429 và proxy trust PASS qua app.main:app. |
+| T12 | 15-slot Install.inf builder | Codex | DONE | 19 ca INF PASS gồm golden, slot order, .ani và kiểm tra injection. |
+| T13 | RAM ZIP packager / download API | Codex | DONE | ZIP, manifest, ANI, lỗi asset và 12 lượt đồng thời qua app.main:app PASS. |
+| T14 | Share service / endpoints | Codex | DONE | POST/GET, 90-day TTL, 404/410, 5/min và MySQL collision retry PASS. |
+| T15 | API integration suite | Codex | DONE | 9 integration + 61 hồi quy, Compose và OpenAPI PASS. |
 | T16 | Vite React strict scaffold | Antigravity | TODO | — |
 | T17 | API client & DTO | Antigravity | TODO | — |
 | T18 | Gallery / PackCard | Antigravity | TODO | — |
@@ -67,6 +67,179 @@
 | T25 | CI / Browser E2E / release | Antigravity + Codex review | TODO | — |
 
 ### 3.1 Active Task Card — copy and update each session
+
+```yaml
+task_id: T15
+task_name: Cross-endpoint API integration suite
+agent: Codex
+status: DONE
+completed_at: "2026-11-17"
+primary_files:
+  - backend/tests/conftest.py
+  - backend/tests/test_api_integration.py
+dependencies: [T08, T09, T10, T11, T12, T13, T14]
+commands_run:
+  - docker build --target development -t ccs-backend:t15-dev ./backend
+  - python -m ruff check app tests
+  - python -m ruff format --check app tests
+  - python -m mypy app tests
+  - python -m pytest tests -q -o asyncio_default_fixture_loop_scope=function
+  - docker compose config --quiet
+  - docker compose up -d db
+  - docker compose up --build -d --wait --wait-timeout 150 backend
+  - docker compose ps
+  - docker compose exec -T -e CCS_RUN_MYSQL_INTEGRATION=1 backend python -m pytest tests -q -ra -o asyncio_default_fixture_loop_scope=function
+  - docker compose exec -T backend python -c '<HTTP categories and OpenAPI smoke>'
+  - docker compose down --volumes
+result_summary: 70 PASS gồm 9 integration và 61 hồi quy. Chạy bằng HTTPConnection qua Uvicorn app.main:app, source và MySQL ccs_test_ trong project riêng. Mặc định 61 PASS và 9 SKIP khi không opt in. Kiểm tra 7 route, category count và draft, phân trang, CUR/ZIP/15 INF slot, download counter đồng thời, upload spoof/quá lớn/429, share expiry 410, seed hai lần và OpenAPI.
+open_blocker: null
+next_task: T16
+```
+
+##### Kết quả pytest
+
+```text
+......................................................................   [100%]
+70 passed in 10.73s
+```
+
+##### Ví dụ request và response trên Compose T15
+
+```http
+GET /api/v1/categories HTTP/1.1
+Host: localhost:8000
+```
+
+HTTP 200, phần tử đầu tiên trong response thực tế
+
+```json
+{"id":1,"name":"Minimal","slug":"minimal","sort_order":0,"pack_count":1}
+```
+
+#### Previous Task Card — T14
+
+```yaml
+task_id: T14
+task_name: Cryptographic share service and routes
+agent: Codex
+status: DONE
+completed_at: "2026-11-17"
+primary_files:
+  - backend/app/services/share_service.py
+  - backend/app/api/v1/studio.py
+dependencies: [T09, T11]
+commands_run:
+  - docker build --target development -t ccs-backend:t14-dev ./backend
+  - python -m ruff check app
+  - python -m ruff format --check app
+  - python -m mypy app
+  - python -m pytest tests -q -o asyncio_default_fixture_loop_scope=function
+  - docker compose up -d db (MySQL project tạm)
+  - docker run -d --read-only --tmpfs /app/app/static/samples --entrypoint python ccs-backend:t14-dev -m uvicorn app.main:app --host 127.0.0.1 --no-proxy-headers (mạng MySQL tạm)
+  - docker exec -i <test-backend> python - (HTTP, TTL, collision retry, OpenAPI and convert regression)
+result_summary: HTTP POST 201 và GET 200 qua app.main:app. Mã Base62 10 ký tự, TTL 90 ngày, chỉ lưu tham chiếu config và share URL từ cấu hình. Reject config sai, trùng JSON key và payload quá 8 KiB. Draft hoặc preview ngoài allowlist bị từ chối. GET 404 cho mã lạ, 410 cho hết hạn hoặc source không còn usable. Ép trùng mã trên MySQL để xác minh retry và giới hạn 5 lần. Share POST giới hạn 5/min theo peer ở mỗi tiến trình.
+open_blocker: null
+next_task: T15
+```
+
+#### Previous Task Card — T13
+
+```yaml
+task_id: T13
+task_name: In-memory ZIP packager and download route
+agent: Codex
+status: DONE
+completed_at: "2026-11-17"
+primary_files:
+  - backend/app/services/zip_packager.py
+  - backend/app/api/v1/catalog.py
+dependencies: [T09, T10, T12]
+commands_run:
+  - docker build --target development -t ccs-backend:t13-dev ./backend
+  - python -m ruff check app
+  - python -m ruff format --check app
+  - python -m mypy app
+  - python -m pytest tests -q -o asyncio_default_fixture_loop_scope=function
+  - docker compose up -d db (project tạm)
+  - docker run -d --read-only --tmpfs /app/app/static/samples --entrypoint python ccs-backend:t13-dev -m uvicorn app.main:app --host 127.0.0.1 --no-proxy-headers (mạng MySQL tạm)
+  - docker exec -i <test-backend> python - (HTTP, ZipFile.testzip, manifest, SQL counters and budgets)
+result_summary: app.main:app stream ZIP với đúng headers. ZipFile.testzip kiểm tra CRC, 10 entry an toàn, tất cả 15 tham chiếu INF khớp và ANI giữ nguyên byte. Thiếu vai trò trả 409, asset thiếu/hỏng/ngoài prefix trả 502, draft trả 404. Các lỗi giữ nguyên counter. 12 lượt tải đồng thời tăng đúng 12. Xác minh giới hạn 10 MiB/item, 50 MiB/pack và request thứ 31 trả 429. Windows VM install vẫn thuộc gate nghiệm thu Windows.
+open_blocker: null
+next_task: T14
+```
+
+##### Tải và kiểm tra ZIP từ backend dev
+
+```bash
+curl -fS http://localhost:8000/api/v1/packs/1/download -o sample.zip
+unzip -t sample.zip
+```
+
+#### Previous Task Card — T12
+
+```yaml
+task_id: T12
+task_name: Strict INF 15-slot builder and tests
+agent: Codex
+status: DONE
+completed_at: "2026-11-17"
+primary_files:
+  - backend/app/services/inf_builder.py
+  - backend/tests/test_inf_builder.py
+dependencies: [T06]
+commands_run:
+  - docker build --target development -t ccs-backend:t12-dev ./backend
+  - python -m pytest tests/test_inf_builder.py -q -o asyncio_default_fixture_loop_scope=function
+  - python -m pytest tests -q -o asyncio_default_fixture_loop_scope=function
+  - python -m ruff check app tests
+  - python -m ruff format --check app tests
+  - python -m mypy app tests
+result_summary: 19 ca INF và bộ hồi quy tổng 61 ca PASS trong image development. Golden kiểm tra ASCII, CRLF, đúng 15 slot và danh sách nguồn. Tên .ani được giữ, AppStarting dùng working và Wait dùng busy. README hướng dẫn Install rồi chọn scheme và Apply. Cài INF thực tế trên Windows VM chờ gate nghiệm thu Windows.
+open_blocker: null
+next_task: T13
+```
+
+#### Previous Task Card — T11
+
+```yaml
+task_id: T11
+task_name: Studio convert API and request schema
+agent: Codex
+status: DONE
+started_at: "2026-11-17"
+completed_at: "2026-11-17"
+primary_files:
+  - backend/app/schemas/studio.py
+  - backend/app/api/v1/studio.py
+approved_additional_files:
+  - backend/app/main.py
+dependencies: [T06, T07]
+commands_run:
+  - docker build --target development -t ccs-backend:t11-main ./backend
+  - docker run --rm --entrypoint python ccs-backend:t11-main -m ruff check app
+  - docker run --rm --entrypoint python ccs-backend:t11-main -m ruff format --check app
+  - docker run --rm --entrypoint python ccs-backend:t11-main -m mypy app
+  - docker run -d --read-only --tmpfs /app/app/static/samples --entrypoint python ccs-backend:t11-main -m uvicorn app.main:app --host 127.0.0.1 --proxy-headers --forwarded-allow-ips 127.0.0.1
+  - docker exec -i <test-backend> python - (HTTP multipart, validation, rate limit)
+  - docker stop <test-backend>
+  - docker logs <test-backend> (startup/shutdown và kiểm tra không lộ payload/tên file)
+result_summary: app.main:app đăng ký đúng route convert và giữ các route catalog. PNG/JPEG/WebP trả CUR 32/48, file trên 1 MiB xử lý trong container read-only. Ca lỗi 413/415/422/429 đều qua. Peer không tin cậy không đổi được hạn mức bằng X-Forwarded-For. Peer proxy được cấu hình tin cậy chuyển được IP client. Live 200 và ready 503 khi thiếu DB. Startup/shutdown sạch, log không có canary. Limiter in-memory áp dụng theo tiến trình. Cấu hình proxy tin cậy phía production thuộc T23.
+open_blocker: null
+next_task: T12
+```
+
+##### Ví dụ multipart và hex header xác minh qua app.main:app
+
+```bash
+curl -fS -D - -F "file=@sample.png" -F "size=48" -F "hotspot_x=47" -F "hotspot_y=47" http://localhost:8000/api/v1/studio/convert -o custom-cursor.cur
+```
+
+```text
+32px (0,0)   00 00 02 00 01 00 20 20 00 00 00 00 00 00 a8 10 00 00 16 00 00 00
+48px (47,47) 00 00 02 00 01 00 30 30 00 00 2f 00 2f 00 a8 25 00 00 16 00 00 00
+```
+
+#### Previous Task Card — T10
 
 ```yaml
 task_id: T10
@@ -400,6 +573,12 @@ next_task: T02
 | 2026-11-17 | Codex | T09 | Build, Ruff và mypy PASS. HTTP MySQL PASS qua mount tạm. Chờ duyệt mount router vào entrypoint vì T09 giới hạn hai file. | `backend/app/schemas/catalog.py`, `backend/app/api/v1/catalog.py`, `PROGRESS.md` | BLOCKED | — | T09 |
 | 2026-11-17 | Codex | T09 | Sau khi được duyệt, mount router một lần trong main.py. Build, OpenAPI, HTTP MySQL, số SELECT và health/lifespan đều PASS qua app.main:app. | `backend/app/main.py`, `TASKS.md`, `PROGRESS.md` | PASS | — | T10 |
 | 2026-11-17 | Codex | T10 | Local/R2 storage, kiểm tra URL/key, giới hạn read và timeout. 42 pytest, đọc CUR seed, Ruff và mypy PASS. | `backend/app/services/storage.py`, `backend/tests/test_storage.py`, `TASKS.md`, `PROGRESS.md` | PASS | — | T11 |
+| 2026-11-17 | Codex | T11 | Build và kiểm thử HTTP qua mount tạm. CUR, upload negatives, 429, read-only và log PASS. Chờ duyệt mount Studio router vào entrypoint chính. | `backend/app/schemas/studio.py`, `backend/app/api/v1/studio.py`, `PROGRESS.md` | BLOCKED | — | T11 |
+| 2026-11-17 | Codex | T11 | Sau khi được duyệt, mount Studio router trong main.py. Build, Ruff, mypy, HTTP, proxy trust và health/lifespan PASS qua app.main:app. | `backend/app/main.py`, `TASKS.md`, `PROGRESS.md` | PASS | — | T12 |
+| 2026-11-17 | Codex | T12 | Golden INF, 15 slot theo thứ tự, .ani, chặn tên file và title độc hại, README kích hoạt thủ công. Build, pytest, Ruff và mypy PASS. | `backend/app/services/inf_builder.py`, `backend/tests/test_inf_builder.py`, `TASKS.md`, `PROGRESS.md` | PASS | — | T13 |
+| 2026-11-17 | Codex | T13 | ZIP trong RAM, kiểm tra asset/INF, HTTP và cập nhật counter atomic. Build, 61 hồi quy, MySQL đồng thời, Ruff và mypy PASS. | `backend/app/services/zip_packager.py`, `backend/app/api/v1/catalog.py`, `TASKS.md`, `PROGRESS.md` | PASS | — | T14 |
+| 2026-11-17 | Codex | T14 | Share create/view với preview allowlist và 90-day TTL. HTTP qua app.main, MySQL collision, OpenAPI, convert hồi quy và 61 pytest PASS. | `backend/app/services/share_service.py`, `backend/app/api/v1/studio.py`, `TASKS.md`, `PROGRESS.md` | PASS | — | T15 |
+| 2026-11-17 | Codex | T15 | Suite hợp đồng 7 API trên app.main và MySQL tạm. Docker Compose, 70 pytest, Ruff, mypy và OpenAPI PASS. | `backend/tests/conftest.py`, `backend/tests/test_api_integration.py`, `TASKS.md`, `PROGRESS.md` | PASS | — | T16 |
 
 **Append rule:** không sửa lịch sử kết quả cũ thành PASS; nếu retry, thêm dòng mới với cause/fix. Link logs phải được sanitize secrets.
 
@@ -595,7 +774,7 @@ Status:
 
 ## 9. Session Handoff — copy for next Agent
 
-**Trạng thái:** T01–T10 PASS. T11 đang chờ giao việc.
+**Trạng thái:** Backend API T01–T15 và phase P2 PASS. T16 thuộc Antigravity và đang chờ giao. Backend production và backup còn T23–T24, cùng phần review CI Backend ở T25.
 
 ### 9.1 Next Session Prompt — Codex (ready to copy)
 
@@ -605,8 +784,8 @@ Bạn đang là Codex, Backend Agent của dự án Custom Cursor Studio & Libra
 Trước khi code, đọc đủ 6 tài liệu tại root:
 PRD.md, ARCHITECTURE.md, DESIGN.md, RULES.md, TASKS.md, PROGRESS.md.
 
-T10 đã PASS. Khi được giao T11, đọc phạm vi và tiêu chí nghiệm thu
-trong TASKS.md và đối chiếu contract upload/convert trong ARCHITECTURE.md.
+T15 đã PASS. Khi được giao T23, đối chiếu phạm vi trong TASKS.md,
+cấu hình production trong ARCHITECTURE.md và deployment follow-up của T08.
 ```
 
 ### 9.2 Next Session Prompt — Antigravity (use only after backend readiness)

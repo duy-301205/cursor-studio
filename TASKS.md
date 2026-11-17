@@ -181,10 +181,10 @@ The linear ordering above is the recommended solo workflow, not an excuse to wai
 - **Primary files:** `backend/app/schemas/studio.py`, `backend/app/api/v1/studio.py`.
 - **Technical work:** multipart POST convert; max 2MiB; magic PNG/JPEG/WEBP + Pillow verify + pixel cap; 32/48/hotspot bounds; rate limit 10/min/IP; threadpool CUR encoding; attachment/no-store response. Provide placeholder router for share endpoints to be added in T14 (do not fake responses).
 - **Acceptance criteria:**
-  - [ ] Valid 32/48 returns binary with CUR prefix and correct `Content-Disposition`.
-  - [ ] SVG/GIF/EXE renamed `.png` rejected 415, >2MiB 413, invalid hotspot 422.
-  - [ ] 11th rapid convert (same test IP) returns 429; forwarded IP handling behind proxy is safe.
-  - [ ] No upload saved as permanent disk file, logs contain no image data.
+  - [x] Valid 32/48 returns binary with CUR prefix and correct `Content-Disposition`.
+  - [x] SVG/GIF/EXE renamed `.png` rejected 415, >2MiB 413, invalid hotspot 422.
+  - [x] 11th rapid convert (same test IP) returns 429; forwarded IP handling behind proxy is safe.
+  - [x] No upload saved as permanent disk file, logs contain no image data.
 - **Evidence:** curl multipart example and header hexdump; rate test.
 
 ### T12 — Strict INF 15-slot builder + tests
@@ -193,10 +193,10 @@ The linear ordering above is the recommended solo workflow, not an excuse to wai
 - **Primary files:** `backend/app/services/inf_builder.py`, `backend/tests/test_inf_builder.py`.
 - **Technical work:** implement 15 ordered Windows slots exactly; accept mapping 8 role → generated safe filenames; generate `Install.inf` with `[Version]`, `[DefaultInstall]`, `[SourceDisksNames]`, `[SourceDisksFiles]`, `[DestinationDirs]`, `[CursorFiles]`, `[CursorScheme]`, `[Strings]`; quote/CRLF/percent sanitization; allow `.ani` where source really .ani.
 - **Acceptance criteria:**
-  - [ ] `len(REGISTRY_ROLE_ORDER) == 15`; output comma-split has exactly 15 entries in canonical order.
-  - [ ] Every scheme path references declared safe file; `Wait` != `AppStarting` map.
-  - [ ] Pack title `"`, comma, `\r\n`, `%` cannot inject INF sections.
-  - [ ] Snapshot/golden INF test pass; README instructs real Windows install flow (no automatic activation promise).
+  - [x] `len(REGISTRY_ROLE_ORDER) == 15`; output comma-split has exactly 15 entries in canonical order.
+  - [x] Every scheme path references declared safe file; `Wait` != `AppStarting` map.
+  - [x] Pack title `"`, comma, `\r\n`, `%` cannot inject INF sections.
+  - [x] Snapshot/golden INF test pass; README instructs real Windows install flow (no automatic activation promise).
 - **Evidence:** `pytest backend/tests/test_inf_builder.py -q`.
 
 ### T13 — Byte-only ZIP packager + download route
@@ -205,10 +205,10 @@ The linear ordering above is the recommended solo workflow, not an excuse to wai
 - **Primary files:** `backend/app/services/zip_packager.py`, `backend/app/api/v1/catalog.py` (modify).
 - **Technical work:** implement `GET /packs/{id}/download`, get trust-validated asset bytes with 10MiB/item and 50MiB total, package manifest, README and INF via in-memory BytesIO; atomic increment after successful package build; stream zip; no disk ZIP.
 - **Acceptance criteria:**
-  - [ ] ZIP returns 200 `application/zip`, opens with Python ZipFile, contains `Install.inf`, README + 8 role files.
-  - [ ] Every referenced INF path ends in one of actual ZIP basenames, zero traversal entries.
-  - [ ] `.ani` preserved on trusted source item; missing/corrupt asset yields 409/502, no count increment.
-  - [ ] Download count increments once on successful generated ZIP, no lost update under concurrency test.
+  - [x] ZIP returns 200 `application/zip`, opens with Python ZipFile, contains `Install.inf`, README + 8 role files.
+  - [x] Every referenced INF path ends in one of actual ZIP basenames, zero traversal entries.
+  - [x] `.ani` preserved on trusted source item; missing/corrupt asset yields 409/502, no count increment.
+  - [x] Download count increments once on successful generated ZIP, no lost update under concurrency test.
 - **Evidence:** `curl -o sample.zip`; `unzip -t`; automated script inspect INF list.
 
 ### T14 — Cryptographic share service + share routes
@@ -217,10 +217,10 @@ The linear ordering above is the recommended solo workflow, not an excuse to wai
 - **Primary files:** `backend/app/services/share_service.py`, `backend/app/api/v1/studio.py` (modify).
 - **Technical work:** implement POST share and GET share; use Pydantic schemas from T11, strict v1 role refs; validate published pack/item; secure 10-char Base62 + unique DB retry; expiry 90d; resolved previews only; share rate limiting; client controlled title sanitized.
 - **Acceptance criteria:**
-  - [ ] POST valid refs returns 201 with share_code/share_url/expires_at.
-  - [ ] GET code returns matching config and published resolved_items; link doesn't need auth.
-  - [ ] Invalid/hidden pack, invalid roles/config, payload >8KiB rejected 4xx.
-  - [ ] Unknown returns 404; expired or now-unpublished source returns 410; unique conflict retries correctly.
+  - [x] POST valid refs returns 201 with share_code/share_url/expires_at.
+  - [x] GET code returns matching config and published resolved_items; link doesn't need auth.
+  - [x] Invalid/hidden pack, invalid roles/config, payload >8KiB rejected 4xx.
+  - [x] Unknown returns 404; expired or now-unpublished source returns 410; unique conflict retries correctly.
 - **Evidence:** POST + GET test pair, expiry negative test.
 
 ### T15 — Cross-endpoint API integration suite
@@ -229,10 +229,10 @@ The linear ordering above is the recommended solo workflow, not an excuse to wai
 - **Primary files:** `backend/tests/conftest.py`, `backend/tests/test_api_integration.py`.
 - **Technical work:** isolated seeded test MySQL db / TestClient or HTTPX async transport, fixtures, all 7 endpoints; pagination/error contract, 15-slot ZIP, upload bytes/magic, rate limits, expired share. No production credentials or external calls.
 - **Acceptance criteria:**
-  - [ ] All 7 endpoints happy path + relevant 4xx case pass.
-  - [ ] Header CUR = `00 00 02 00`, ZIP = `PK`, scheme split exactly 15.
-  - [ ] Seed rerun idempotent; draft excluded; expired share 410; upload spoof rejected.
-  - [ ] `ruff`, `pytest`, Docker compose smoke run green; OpenAPI JSON accessible.
+  - [x] All 7 endpoints happy path + relevant 4xx case pass.
+  - [x] Header CUR = `00 00 02 00`, ZIP = `PK`, scheme split exactly 15.
+  - [x] Seed rerun idempotent; draft excluded; expired share 410; upload spoof rejected.
+  - [x] `ruff`, `pytest`, Docker compose smoke run green; OpenAPI JSON accessible.
 - **Evidence:** complete test output + example request/response in PROGRESS.
 
 ---

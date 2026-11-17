@@ -104,9 +104,9 @@ The linear ordering above is the recommended solo workflow, not an excuse to wai
 - **Primary files:** `backend/app/models/cursor_item.py`, `backend/app/models/custom_creation.py`.
 - **Technical work:** 8-role enum, FK `ON DELETE CASCADE`, unique pack/role, hotspot TINYINT UNSIGNED + CHECK 0..47, URLs; share code case-sensitive ASCII unique, JSON, expiry index, download_count.
 - **Acceptance criteria:**
-  - [ ] SQLAlchemy metadata has all four tables and explicit FK/index/unique constraints.
-  - [ ] Role enum contains exactly 8 values; no 15 registry slots stored directly as product roles.
-  - [ ] Share code constraint 8..12, JSON config field and UTC dates defined.
+  - [x] SQLAlchemy metadata has all four tables and explicit FK/index/unique constraints.
+  - [x] Role enum contains exactly 8 values; no 15 registry slots stored directly as product roles.
+  - [x] Share code constraint 8..12, JSON config field and UTC dates defined.
 - **Evidence:** `python -c` metadata introspection and SQL compile check.
 
 ### T06 — Binary CUR encoder + unit tests

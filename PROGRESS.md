@@ -3,7 +3,7 @@
 > **Project:** Custom Cursor Studio & Library | **Tracking schema:** v1.0  
 > **Last updated:** 2026-11-17 | **Status:** IN_PROGRESS
 >
-> **Current phase:** P1 — Foundation | **Next task:** T05
+> **Current phase:** P1 — Foundation | **Next task:** T06
 >
 > **Important:** Trạng thái bên dưới là template ban đầu; **không** có task kỹ thuật nào được đánh dấu PASS trước khi Agent thực sự chạy code/test.
 
@@ -13,26 +13,26 @@
 |---|---|---|
 | Overall status | `IN_PROGRESS` | `NOT_STARTED / IN_PROGRESS / BLOCKED / RELEASE_READY / RELEASED` |
 | Active Phase | P1 — Docker-First Foundation | Đổi khi phase gate pass |
-| Active Task | `T05` — Cursor item / share models (TODO) | Một task primary tại một thời điểm |
+| Active Task | `T06` — CUR binary encoder & tests (TODO) | Một task primary tại một thời điểm |
 | Backend Owner | Codex | Owner changes require explicit agreement |
 | Frontend Owner | Antigravity | Start after API shape confirmed |
 | Target stack | Python 3.12, FastAPI, MySQL 8.0, React 18, Vite, TS strict | Change via CR |
 | P0 scope | 7 endpoints, 8 product roles, 15 Windows slots | Do not silently expand |
-| Latest passing build | `ccs-backend:t04-dev`, Docker Desktop Linux/amd64 | Command + evidence |
-| Latest passing tests | T04, 2026-11-17. MySQL DDL compile, metadata, relationship, Ruff và mypy. | Count + command + date |
+| Latest passing build | `ccs-backend:t05-dev`, Docker Desktop Linux/amd64 | Command + evidence |
+| Latest passing tests | T05, 2026-11-17. MySQL DDL compile, bốn bảng trong metadata, tám giá trị enum, Ruff và mypy. | Count + command + date |
 | Latest release decision | `NO-GO — not implemented` | Gate-based, not intuition |
 | Known blockers | License review, future Windows VM validation | Assign before launch |
-| Next handoff | Give Codex T05 | Copy prompt at bottom |
+| Next handoff | Give Codex T06 | Copy prompt at bottom |
 
 ## 2. Phase Status Board
 
 | Phase | Tasks | Owner | Status | Done / Total | Exit criteria | Proof |
 |---|---|---|---|---:|---|---|
-| P1 — Foundation | T01–T07 | Codex | IN_PROGRESS | 4/7 | Healthy Docker, 5 cat, ≥2 seeded full packs | T01–T04 PASS. Phase gate pending. |
+| P1 — Foundation | T01–T07 | Codex | IN_PROGRESS | 5/7 | Healthy Docker, 5 cat, ≥2 seeded full packs | T01–T05 PASS. Phase gate pending. |
 | P2 — APIs / Security | T08–T15 | Codex | TODO | 0/8 | 7 endpoints validated, 15-slot ZIP & CUR tests | Pending |
 | P3 — UI / Studio | T16–T22 | Antigravity | TODO | 0/7 | Gallery, Sandbox, Studio, Mix & Share E2E | Pending |
 | P4 — Production | T23–T25 | Both; owner per task | TODO | 0/3 | HTTPS, backup restore, CI, Windows QA, license | Pending |
-| **TOTAL** | **T01–T25** | — | **IN_PROGRESS** | **4/25** | **Release gates all PASS** | **T01–T04 PASS** |
+| **TOTAL** | **T01–T25** | — | **IN_PROGRESS** | **5/25** | **Release gates all PASS** | **T01–T05 PASS** |
 
 **Allowed status:** `TODO`, `IN_PROGRESS`, `BLOCKED`, `IN_REVIEW`, `DONE`, `SKIPPED_WITH_APPROVAL`. No `DONE` unless AC and evidence complete. `SKIPPED_WITH_APPROVAL` must record Product Owner, why, risk and follow-up.
 
@@ -44,7 +44,7 @@
 | T02 | Dev Compose & example env | Codex | DONE | Hai service chạy, MySQL healthy, hot reload và dữ liệu qua restart đã kiểm chứng. |
 | T03 | Config & AsyncSession | Codex | DONE | Hai image rebuild, MySQL SELECT 1 và vòng đời session PASS. Production startup lỗi đúng khi thiếu cấu hình. |
 | T04 | Category / pack models | Codex | DONE | Metadata và DDL MySQL đối chiếu với DDL chuẩn, Ruff và mypy PASS. |
-| T05 | Cursor item / share models | Codex | TODO | — |
+| T05 | Cursor item / share models | Codex | DONE | Bốn bảng trong metadata, tám role, DDL MySQL, Ruff và mypy PASS. |
 | T06 | CUR binary encoder & tests | Codex | TODO | — |
 | T07 | Auto-seed, lifespan, health | Codex | TODO | — |
 | T08 | Alembic migration | Codex | TODO | — |
@@ -67,6 +67,29 @@
 | T25 | CI / Browser E2E / release | Antigravity + Codex review | TODO | — |
 
 ### 3.1 Active Task Card — copy and update each session
+
+```yaml
+task_id: T05
+task_name: Cursor item and share ORM models
+agent: Codex
+status: DONE
+completed_at: "2026-11-17"
+primary_files:
+  - backend/app/models/cursor_item.py
+  - backend/app/models/custom_creation.py
+dependencies: [T04]
+commands_run:
+  - docker build --target development -t ccs-backend:t05-dev ./backend
+  - docker run --rm --entrypoint python ccs-backend:t05-dev -m ruff check app
+  - docker run --rm --entrypoint python ccs-backend:t05-dev -m ruff format --check app
+  - docker run --rm --entrypoint python ccs-backend:t05-dev -m mypy app
+  - docker run --rm -i --entrypoint python ccs-backend:t05-dev -
+result_summary: Import bốn bảng, configure mapper và biên dịch DDL MySQL để đối chiếu kiểu cột, tám role, FK CASCADE, check constraints và indexes. Schema chưa áp dụng vào database.
+open_blocker: null
+next_task: T06
+```
+
+#### Previous Task Card — T04
 
 ```yaml
 task_id: T04
@@ -201,6 +224,7 @@ next_task: T02
 | 2026-11-17 | Codex | T03 | Lỗi MySQL trên image hiện tại: asyncmy cần cryptography cho caching_sha2_password. Container tạm cài gói này đã qua SQL smoke test và kiểm tra vòng đời session. Startup hook từ chối thiếu cấu hình khi gọi riêng, entrypoint thật chưa nối hook. Ruff và mypy PASS. | `backend/app/core/config.py`, `backend/app/db/session.py`, `PROGRESS.md` | BLOCKED | — | T03 |
 | 2026-11-17 | Codex | T03 | Sau khi được duyệt, nối FastAPI lifespan và khóa cryptography cho hai image. Giữ nguyên phiên bản dependency cũ. MySQL thật, ASGI startup/shutdown, log production và lint/typecheck PASS. | `backend/app/main.py`, `backend/pyproject.toml`, hai lockfile, `TASKS.md`, `PROGRESS.md` | PASS | — | T04 |
 | 2026-11-17 | Codex | T04 | Đối chiếu metadata và DDL MySQL của hai model với schema chuẩn. Ruff, format và mypy PASS. | `backend/app/models/category.py`, `backend/app/models/cursor_pack.py`, `TASKS.md`, `PROGRESS.md` | PASS | — | T05 |
+| 2026-11-17 | Codex | T05 | Ruff yêu cầu ngắt dòng import SQLAlchemy. Đã chỉnh và chạy lại build, Ruff, format, mypy, metadata và DDL MySQL. | `backend/app/models/cursor_item.py`, `backend/app/models/custom_creation.py`, `TASKS.md`, `PROGRESS.md` | PASS | — | T06 |
 
 **Append rule:** không sửa lịch sử kết quả cũ thành PASS; nếu retry, thêm dòng mới với cause/fix. Link logs phải được sanitize secrets.
 
@@ -212,7 +236,7 @@ next_task: T02
 - [x] T02 — docker compose gồm chính xác db/backend.
 - [x] T03 — typed settings + async DB session.
 - [x] T04 — Category, cursor pack models.
-- [ ] T05 — Cursor item, custom creation models.
+- [x] T05 — Cursor item, custom creation models.
 - [ ] T06 — binary CUR encoder + tests.
 - [ ] T07 — lifespan auto-seed + 5 categories/2 packs/8 roles + health check.
 - [ ] Phase gate P1: fresh clone test / idempotency / check logs.
@@ -396,7 +420,7 @@ Status:
 
 ## 9. Session Handoff — copy for next Agent
 
-**Trạng thái:** T01–T04 PASS trên Docker Desktop Linux/amd64. T05 đang chờ giao việc.
+**Trạng thái:** T01–T05 PASS trên Docker Desktop Linux/amd64. T06 đang chờ giao việc.
 
 ### 9.1 Next Session Prompt — Codex (ready to copy)
 
@@ -406,8 +430,8 @@ Bạn đang là Codex, Backend Agent của dự án Custom Cursor Studio & Libra
 Trước khi code, đọc đủ 6 tài liệu tại root:
 PRD.md, ARCHITECTURE.md, DESIGN.md, RULES.md, TASKS.md, PROGRESS.md.
 
-T04 đã PASS. Khi được giao T05, đọc phạm vi và tiêu chí nghiệm thu
-trong TASKS.md. Dùng DeclarativeBase hiện có trong backend/app/db/session.py.
+T05 đã PASS. Khi được giao T06, đọc phạm vi và tiêu chí nghiệm thu
+trong TASKS.md và đặc tả CUR trong ARCHITECTURE.md.
 ```
 
 ### 9.2 Next Session Prompt — Antigravity (use only after backend readiness)

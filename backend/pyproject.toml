@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ccs-backend"
+version = "0.1.0"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "alembic>=1.14,<2",
+    "asyncmy>=0.2.10,<0.3",
+    "boto3>=1.35,<2",
+    "cryptography>=50,<51",
+    "fastapi>=0.115,<1",
+    "pillow>=12,<13",
+    "pydantic>=2.10,<3",
+    "pydantic-settings>=2.7,<3",
+    "python-multipart>=0.0.22,<0.1",
+    "slowapi>=0.1.9,<0.2",
+    "sqlalchemy[asyncio]>=2.0,<2.1",
+    "uvicorn>=0.34,<1",
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.14,<3",
+    "pytest>=8.3,<10",
+    "pytest-asyncio>=1,<2",
+    "ruff>=0.11,<1",
+    "watchfiles>=1,<2",
+]
+
+[tool.setuptools.packages.find]
+include = ["app", "app.*"]
+namespaces = false
+
+[tool.ruff]
+target-version = "py312"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true

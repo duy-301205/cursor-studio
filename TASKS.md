@@ -57,10 +57,10 @@ The linear ordering above is the recommended solo workflow, not an excuse to wai
 - **Primary files:** `backend/pyproject.toml`, `backend/Dockerfile`.
 - **Technical work:** Python 3.12; pin compatible ranges for FastAPI, uvicorn, SQLAlchemy[asyncio], asyncmy, Pydantic v2, Alembic, Pillow, python-multipart, slowapi, boto3/aioboto3 or bounded threadpool adapter, pytest/pytest-asyncio, ruff. Make development and production Docker stages. Production runs as non-root; no `--reload`. During initial framework scaffold, generate empty package directories, `backend/app/__init__.py`, `backend/alembic.ini` and stub API router modules **only if mechanically needed**, and report them as ancillary scaffold outputs.
 - **Acceptance criteria:**
-  - [ ] Dockerfile has dev/prod target, Python 3.12, workdir `/app`, stable pip install and valid CMD.
-  - [ ] `docker build -f backend/Dockerfile --target development backend` passes with minimal app skeleton.
-  - [ ] `python -m pip check` passes in image; dependency versions are pinned/locked for CI reproducibility.
-  - [ ] No secrets in image layers, no debug root runtime in production.
+  - [x] Dockerfile has dev/prod target, Python 3.12, workdir `/app`, stable pip install and valid CMD.
+  - [x] `docker build -f backend/Dockerfile --target development backend` passes with minimal app skeleton.
+  - [x] `python -m pip check` passes in image; dependency versions are pinned/locked for CI reproducibility.
+  - [x] No secrets in image layers, no debug root runtime in production.
 - **Evidence command:** `docker build --target development -t ccs-backend:dev ./backend`.
 
 ### T02 — Local Docker Compose and example env
@@ -69,10 +69,10 @@ The linear ordering above is the recommended solo workflow, not an excuse to wai
 - **Primary files:** `docker-compose.dev.yml`, `.env.example`.
 - **Technical work:** exactly two services `db:mysql:8.0` and `backend` hot-reload; MySQL healthcheck, named volume, host-bound 8000/3307; document local passwords placeholders, `CORS_ORIGINS`, `AUTO_SEED`.
 - **Acceptance criteria:**
-  - [ ] `docker compose -f docker-compose.dev.yml config` passes with `.env` created from example.
-  - [ ] `docker compose ... up -d db` reaches `healthy`.
-  - [ ] Backend mounts source for reload, DB remains intact after service restart.
-  - [ ] No public MySQL port bind on `0.0.0.0` and no third dev container.
+  - [x] `docker compose -f docker-compose.dev.yml config` passes with `.env` created from example.
+  - [x] `docker compose ... up -d db` reaches `healthy`.
+  - [x] Backend mounts source for reload, DB remains intact after service restart.
+  - [x] No public MySQL port bind on `0.0.0.0` and no third dev container.
 - **Evidence command:** `docker compose -f docker-compose.dev.yml ps`.
 
 ### T03 — Typed application config and AsyncSession
@@ -81,10 +81,10 @@ The linear ordering above is the recommended solo workflow, not an excuse to wai
 - **Primary files:** `backend/app/core/config.py`, `backend/app/db/session.py`.
 - **Technical work:** Pydantic Settings/env parsing; dev/prod flags; CORS allowlist and public base URLs; SQLAlchemy `AsyncEngine`, `async_sessionmaker`, declarative Base; produce DSN safely from individual env vars (no interpolation injection); DB UTC, SQL pool_pre_ping.
 - **Acceptance criteria:**
-  - [ ] Missing required prod settings cause startup validation error, no silent default secret.
-  - [ ] One AsyncSession per request, dependency yields/closes correctly.
-  - [ ] `asyncmy` connects DB via service name `db`; wrong password results in actionable log without secret.
-  - [ ] Typecheck/lint passes; no synchronous DB calls in event loop.
+  - [x] Missing required prod settings cause startup validation error, no silent default secret.
+  - [x] One AsyncSession per request, dependency yields/closes correctly.
+  - [x] `asyncmy` connects DB via service name `db`; wrong password results in actionable log without secret.
+  - [x] Typecheck/lint passes; no synchronous DB calls in event loop.
 - **Evidence:** test connection within backend container; static checks.
 
 ### T04 — Category and pack ORM models
@@ -93,9 +93,9 @@ The linear ordering above is the recommended solo workflow, not an excuse to wai
 - **Primary files:** `backend/app/models/category.py`, `backend/app/models/cursor_pack.py`.
 - **Technical work:** SQLAlchemy 2.x typed `Mapped[...]`; category slug unique/sort index; pack category FK, enum status draft/published, counts, created/updated UTC, indexes exactly as DDL; relationships with string names to avoid circular imports.
 - **Acceptance criteria:**
-  - [ ] Column types/limits match canonical SQL including `BIGINT UNSIGNED` and MySQL enum.
-  - [ ] Draft is default, category FK RESTRICT, `download_count>=0` logically enforced by UNSIGNED.
-  - [ ] `metadata.tables` contains `categories`, `cursor_packs`; no hardcoded sample pack data in model.
+  - [x] Column types/limits match canonical SQL including `BIGINT UNSIGNED` and MySQL enum.
+  - [x] Draft is default, category FK RESTRICT, `download_count>=0` logically enforced by UNSIGNED.
+  - [x] `metadata.tables` contains `categories`, `cursor_packs`; no hardcoded sample pack data in model.
 - **Evidence:** small import/metadatas inspection; ruff.
 
 ### T05 — Cursor item and share ORM models

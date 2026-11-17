@@ -1,36 +1,38 @@
 # PROGRESS.md — Project State Tracker, Decisions & Debugging Log
 
 > **Project:** Custom Cursor Studio & Library | **Tracking schema:** v1.0  
-> **Last updated:** 2026-11-17  | **Status:** NOT STARTED / documentation baseline prepared  
-> **Current phase:** P1 — Foundation | **Current task:** T01  
+> **Last updated:** 2026-11-17 | **Status:** IN_PROGRESS
+>
+> **Current phase:** P1 — Foundation | **Next task:** T05
+>
 > **Important:** Trạng thái bên dưới là template ban đầu; **không** có task kỹ thuật nào được đánh dấu PASS trước khi Agent thực sự chạy code/test.
 
 ## 1. Executive Snapshot
 
 | Field | Current value | Update rule |
 |---|---|---|
-| Overall status | `NOT_STARTED` | `NOT_STARTED / IN_PROGRESS / BLOCKED / RELEASE_READY / RELEASED` |
+| Overall status | `IN_PROGRESS` | `NOT_STARTED / IN_PROGRESS / BLOCKED / RELEASE_READY / RELEASED` |
 | Active Phase | P1 — Docker-First Foundation | Đổi khi phase gate pass |
-| Active Task | `T01` — Backend package and container image | Một task primary tại một thời điểm |
+| Active Task | `T05` — Cursor item / share models (TODO) | Một task primary tại một thời điểm |
 | Backend Owner | Codex | Owner changes require explicit agreement |
 | Frontend Owner | Antigravity | Start after API shape confirmed |
 | Target stack | Python 3.12, FastAPI, MySQL 8.0, React 18, Vite, TS strict | Change via CR |
 | P0 scope | 7 endpoints, 8 product roles, 15 Windows slots | Do not silently expand |
-| Latest passing build | `N/A — not run` | Command + evidence |
-| Latest passing tests | `N/A — not run` | Count + command + date |
+| Latest passing build | `ccs-backend:t04-dev`, Docker Desktop Linux/amd64 | Command + evidence |
+| Latest passing tests | T04, 2026-11-17. MySQL DDL compile, metadata, relationship, Ruff và mypy. | Count + command + date |
 | Latest release decision | `NO-GO — not implemented` | Gate-based, not intuition |
 | Known blockers | License review, future Windows VM validation | Assign before launch |
-| Next handoff | Give Codex T01 | Copy prompt at bottom |
+| Next handoff | Give Codex T05 | Copy prompt at bottom |
 
 ## 2. Phase Status Board
 
 | Phase | Tasks | Owner | Status | Done / Total | Exit criteria | Proof |
 |---|---|---|---|---:|---|---|
-| P1 — Foundation | T01–T07 | Codex | TODO | 0/7 | Healthy Docker, 5 cat, ≥2 seeded full packs | Pending |
+| P1 — Foundation | T01–T07 | Codex | IN_PROGRESS | 4/7 | Healthy Docker, 5 cat, ≥2 seeded full packs | T01–T04 PASS. Phase gate pending. |
 | P2 — APIs / Security | T08–T15 | Codex | TODO | 0/8 | 7 endpoints validated, 15-slot ZIP & CUR tests | Pending |
 | P3 — UI / Studio | T16–T22 | Antigravity | TODO | 0/7 | Gallery, Sandbox, Studio, Mix & Share E2E | Pending |
 | P4 — Production | T23–T25 | Both; owner per task | TODO | 0/3 | HTTPS, backup restore, CI, Windows QA, license | Pending |
-| **TOTAL** | **T01–T25** | — | **TODO** | **0/25** | **Release gates all PASS** | **Pending** |
+| **TOTAL** | **T01–T25** | — | **IN_PROGRESS** | **4/25** | **Release gates all PASS** | **T01–T04 PASS** |
 
 **Allowed status:** `TODO`, `IN_PROGRESS`, `BLOCKED`, `IN_REVIEW`, `DONE`, `SKIPPED_WITH_APPROVAL`. No `DONE` unless AC and evidence complete. `SKIPPED_WITH_APPROVAL` must record Product Owner, why, risk and follow-up.
 
@@ -38,10 +40,10 @@
 
 | ID | Task | Agent | Status | Evidence / Commit |
 |---|---|---|---|---|
-| T01 | Backend package & Docker image | Codex | TODO | — |
-| T02 | Dev Compose & example env | Codex | TODO | — |
-| T03 | Config & AsyncSession | Codex | TODO | — |
-| T04 | Category / pack models | Codex | TODO | — |
+| T01 | Backend package & Docker image | Codex | DONE | Hai stage build và khởi động, `pip check` sạch, production UID 10001. |
+| T02 | Dev Compose & example env | Codex | DONE | Hai service chạy, MySQL healthy, hot reload và dữ liệu qua restart đã kiểm chứng. |
+| T03 | Config & AsyncSession | Codex | DONE | Hai image rebuild, MySQL SELECT 1 và vòng đời session PASS. Production startup lỗi đúng khi thiếu cấu hình. |
+| T04 | Category / pack models | Codex | DONE | Metadata và DDL MySQL đối chiếu với DDL chuẩn, Ruff và mypy PASS. |
 | T05 | Cursor item / share models | Codex | TODO | — |
 | T06 | CUR binary encoder & tests | Codex | TODO | — |
 | T07 | Auto-seed, lifespan, health | Codex | TODO | — |
@@ -67,25 +69,120 @@
 ### 3.1 Active Task Card — copy and update each session
 
 ```yaml
+task_id: T04
+task_name: Category and pack ORM models
+agent: Codex
+status: DONE
+completed_at: "2026-11-17"
+primary_files:
+  - backend/app/models/category.py
+  - backend/app/models/cursor_pack.py
+dependencies: [T03]
+commands_run:
+  - docker build --target development -t ccs-backend:t04-dev ./backend
+  - docker run --rm --entrypoint python ccs-backend:t04-dev -m ruff check app
+  - docker run --rm --entrypoint python ccs-backend:t04-dev -m ruff format --check app
+  - docker run --rm --entrypoint python ccs-backend:t04-dev -m mypy app
+  - docker run --rm -i --entrypoint python ccs-backend:t04-dev -
+result_summary: So sánh metadata và DDL MySQL biên dịch từ hai model với DDL chuẩn. Xác minh kiểu và độ dài cột, mặc định, khóa, thứ tự index, ENUM và relationship. Kiểm tra dùng MySQL dialect và chưa áp dụng schema lên cơ sở dữ liệu.
+open_blocker: null
+next_task: T05
+```
+
+#### Previous Task Card — T03
+
+```yaml
+task_id: T03
+task_name: Typed application config and AsyncSession
+agent: Codex
+status: DONE
+started_at: "2026-11-17"
+completed_at: "2026-11-17"
+primary_files:
+  - backend/app/core/config.py
+  - backend/app/db/session.py
+approved_additional_files:
+  - backend/app/main.py
+  - backend/pyproject.toml
+  - backend/requirements.lock
+  - backend/requirements-dev.lock
+dependencies: [T02]
+commands_run:
+  - docker compose --env-file <temp-env> -p <test-project> -f docker-compose.dev.yml up -d --wait --wait-timeout 150 db
+  - docker build --target development -t ccs-backend:t03-dev ./backend
+  - docker build --target production -t ccs-backend:t03-prod ./backend
+  - docker run --rm --entrypoint python ccs-backend:t03-dev -m ruff check app
+  - docker run --rm --entrypoint python ccs-backend:t03-dev -m ruff format --check app
+  - docker run --rm --entrypoint python ccs-backend:t03-dev -m mypy app
+  - docker run --rm --entrypoint python <image> -m pip check
+  - docker run --rm --entrypoint python <image> -c 'import cryptography; print(cryptography.__version__)'
+  - docker run --rm --network <test-network> --env-file <runtime-env> -i --entrypoint python ccs-backend:t03-dev -
+  - docker run --rm -e APP_ENV=production ccs-backend:t03-prod (với biến kiểm thử cho từng ca)
+result_summary: Cryptography 50.0.2 có trong cả hai image. Image dev chạy SELECT 1 qua service db, UTC, mỗi request có session riêng, trả kết nối và dispose pool khi ASGI shutdown. Lỗi sai mật khẩu có thông báo kiểm tra cấu hình. Uvicorn production trả mã 3 khi thiếu cấu hình hoặc port sai. Log không chứa giá trị thử của credentials hay input lỗi.
+open_blocker: null
+next_task: T04
+```
+
+#### Previous Task Card — T02
+
+```yaml
+task_id: T02
+task_name: Local Docker Compose and example env
+agent: Codex
+status: DONE
+completed_at: "2026-11-17"
+primary_files: [docker-compose.dev.yml, .env.example]
+dependencies: [T01]
+commands_run:
+  - docker pull mysql:8.0
+  - docker compose --env-file <temp/.env> -p <test-project> -f docker-compose.dev.yml config --quiet
+  - docker compose --env-file <temp/.env> -p <test-project> -f docker-compose.dev.yml up -d --wait --wait-timeout 150 db
+  - docker compose --env-file <temp/.env> -p <test-project> -f docker-compose.dev.yml up --build -d --wait --wait-timeout 150
+  - docker compose --env-file <temp/.env> -p <test-project> -f docker-compose.dev.yml restart db backend
+  - docker compose --env-file <temp/.env> -p <test-project> -f docker-compose.dev.yml ps
+  - docker compose --env-file <temp/.env> -p <test-project> -f docker-compose.dev.yml down --volumes
+result_summary: MySQL healthy trên 127.0.0.1:3307. File thử trên host kích hoạt Uvicorn reload. Truy vấn sau restart trả lại 42. Đúng hai service.
+open_blocker: null
+next_task: T03
+```
+
+#### Previous Task Card — T01
+
+```yaml
 task_id: T01
 task_name: Backend package and container image
 agent: Codex
-status: TODO
-started_at: null
-completed_at: null
-git_branch: task/T01-backend-image
+status: DONE
+started_at: "2026-11-17"
+completed_at: "2026-11-17"
+git_branch: main
 git_commit: null
 primary_files:
   - backend/pyproject.toml
   - backend/Dockerfile
 dependencies: []
 acceptance:
-  - [ ] Docker development target builds
-  - [ ] Python 3.12 + dependency checks pass
-  - [ ] Production stage non-root, no reload
-  - [ ] No secrets committed
-commands_run: []
-result_summary: Not started
+  - "[x] Docker development target builds"
+  - "[x] Python 3.12 + dependency checks pass"
+  - "[x] Production stage non-root, no reload"
+  - "[x] No secrets in the backend build inputs"
+commands_run:
+  - docker build --target development -t ccs-backend:dev ./backend
+  - docker build -f backend/Dockerfile --target development backend
+  - docker run --rm --entrypoint python ccs-backend:dev -m pip check
+  - docker build --target production -t ccs-backend:prod ./backend
+  - docker run --rm --entrypoint python ccs-backend:prod -m pip check
+  - docker run --rm --entrypoint id ccs-backend:prod -u
+  - docker image inspect ccs-backend:dev ccs-backend:prod
+  - docker history --no-trunc ccs-backend:dev
+  - docker history --no-trunc ccs-backend:prod
+  - docker run -d ccs-backend:dev
+  - docker run -d ccs-backend:prod
+  - docker exec <container> python -c '<TCP smoke check on 127.0.0.1:8000>'
+  - docker run --rm --entrypoint python ccs-backend:dev -m ruff check app
+  - docker run --rm --entrypoint python ccs-backend:dev -m ruff format --check app
+  - docker run --rm --entrypoint python ccs-backend:dev -m mypy app
+result_summary: Hai stage build và CMD mặc định mở cổng 8000. Cả hai dùng Python 3.12.16 và qua pip check. Development có reload. Production chạy UID 10001 với reload tắt. Pip cảnh báo cache không ghi được dưới UID này và vẫn trả mã 0.
 open_blocker: null
 next_task: T02
 ```
@@ -95,17 +192,26 @@ next_task: T02
 | Timestamp (UTC+7) | Agent | Task | Summary | Files | Tests PASS/FAIL | Commit | Next |
 |---|---|---|---|---|---|---|---|
 | 2026-11-17 | Architect | Docs baseline | 6 planning documents drafted; no code/task execution claimed | `*.md` | N/A | — | T01 |
+| 2026-11-17 | Codex | T01 | Lần đầu Docker CLI thiếu pipe `dockerDesktopLinuxEngine`. Build và kiểm tra runtime chưa chạy được. | `backend/` | BLOCKED | — | T01 |
+| 2026-11-17 | Codex | T01 | BuildKit mất kết nối EOF trong lần build đầu. Sau khi Docker Desktop chạy lại, build tuần tự. Ruff phát hiện file Python executable từ Windows build context. | `backend/` | FAIL | — | T01 |
+| 2026-11-17 | Codex | T01 | Chuẩn hóa quyền file Python trong image dev và chạy lại kiểm thử. Ghim base image theo digest và khóa dependency trực tiếp, gián tiếp bằng SHA-256. | `backend/`, `TASKS.md`, `PROGRESS.md` | PASS | — | T02 |
+| 2026-11-17 | Codex | T02 | `docker compose --env-file <temp/.env> -p <test-project> -f docker-compose.dev.yml config --quiet` PASS. Cấu hình đúng hai service và bind MySQL vào `127.0.0.1:3307`. Lệnh `up -d --wait db` gặp `unexpected EOF` lúc giải nén `mysql:8.0`. Lượt chạy lại bị gián đoạn khi tải image. Chờ kiểm thử MySQL healthy, reload và dữ liệu qua restart. | `docker-compose.dev.yml`, `.env.example`, `PROGRESS.md` | INCOMPLETE | — | T02 |
+| 2026-11-17 | Codex | T02 | MySQL đã healthy. Kiểm tra TCP backend chạy sớm hơn lúc Uvicorn sẵn sàng và trả Connection refused. | `docker-compose.dev.yml`, `.env.example` | FAIL | — | T02 |
+| 2026-11-17 | Codex | T02 | Chạy lại với bước chờ Uvicorn báo startup hoàn tất. Xác minh MySQL healthy, Uvicorn reload khi sửa file host và dữ liệu giữ qua restart. | `docker-compose.dev.yml`, `.env.example`, `TASKS.md`, `PROGRESS.md` | PASS | — | T03 |
+| 2026-11-17 | Codex | T03 | Lỗi MySQL trên image hiện tại: asyncmy cần cryptography cho caching_sha2_password. Container tạm cài gói này đã qua SQL smoke test và kiểm tra vòng đời session. Startup hook từ chối thiếu cấu hình khi gọi riêng, entrypoint thật chưa nối hook. Ruff và mypy PASS. | `backend/app/core/config.py`, `backend/app/db/session.py`, `PROGRESS.md` | BLOCKED | — | T03 |
+| 2026-11-17 | Codex | T03 | Sau khi được duyệt, nối FastAPI lifespan và khóa cryptography cho hai image. Giữ nguyên phiên bản dependency cũ. MySQL thật, ASGI startup/shutdown, log production và lint/typecheck PASS. | `backend/app/main.py`, `backend/pyproject.toml`, hai lockfile, `TASKS.md`, `PROGRESS.md` | PASS | — | T04 |
+| 2026-11-17 | Codex | T04 | Đối chiếu metadata và DDL MySQL của hai model với schema chuẩn. Ruff, format và mypy PASS. | `backend/app/models/category.py`, `backend/app/models/cursor_pack.py`, `TASKS.md`, `PROGRESS.md` | PASS | — | T05 |
 
 **Append rule:** không sửa lịch sử kết quả cũ thành PASS; nếu retry, thêm dòng mới với cause/fix. Link logs phải được sanitize secrets.
 
 ## 4. Current Sprint Checklist
 
-**Sprint 1 / Foundation — planned, not started:**
+**Sprint 1 / Foundation — in progress**
 
-- [ ] T01 — tạo backend package + development/prod Docker stages.
-- [ ] T02 — docker compose gồm chính xác db/backend.
-- [ ] T03 — typed settings + async DB session.
-- [ ] T04 — Category, cursor pack models.
+- [x] T01 — tạo backend package + development/prod Docker stages.
+- [x] T02 — docker compose gồm chính xác db/backend.
+- [x] T03 — typed settings + async DB session.
+- [x] T04 — Category, cursor pack models.
 - [ ] T05 — Cursor item, custom creation models.
 - [ ] T06 — binary CUR encoder + tests.
 - [ ] T07 — lifespan auto-seed + 5 categories/2 packs/8 roles + health check.
@@ -290,7 +396,7 @@ Status:
 
 ## 9. Session Handoff — copy for next Agent
 
-**Current precise state (initial):** docs baseline available, implementation not started; next task **T01 for Codex**. Do not ask Antigravity to implement API mocks before backend contracts stabilize unless owner authorizes parallel layout-only scaffold.
+**Trạng thái:** T01–T04 PASS trên Docker Desktop Linux/amd64. T05 đang chờ giao việc.
 
 ### 9.1 Next Session Prompt — Codex (ready to copy)
 
@@ -300,20 +406,8 @@ Bạn đang là Codex, Backend Agent của dự án Custom Cursor Studio & Libra
 Trước khi code, đọc đủ 6 tài liệu tại root:
 PRD.md, ARCHITECTURE.md, DESIGN.md, RULES.md, TASKS.md, PROGRESS.md.
 
-Trạng thái hiện tại: toàn bộ code chưa triển khai; active task T01.
-Hãy thực thi CHỈ TASK T01 — Backend package and container image.
-Primary files được sửa: backend/pyproject.toml và backend/Dockerfile.
-Được phép tạo scaffold/package stubs và lockfiles tự sinh, liệt kê rõ.
-Cài Python 3.12 + FastAPI async stack, Docker stages development/production.
-
-Bắt buộc:
-- Theo STRICT RULES của Codex, không sửa frontend hay API contract.
-- Chạy `docker build --target development -t ccs-backend:dev ./backend`
-  và các kiểm tra package thích hợp.
-- Không tuyên bố PASS nếu build chưa chạy.
-- Cập nhật PROGRESS.md: T01 status, files, commands/results, blockers,
-  next task T02.
-- Trả kết quả theo template ở cuối RULES.md.
+T04 đã PASS. Khi được giao T05, đọc phạm vi và tiêu chí nghiệm thu
+trong TASKS.md. Dùng DeclarativeBase hiện có trong backend/app/db/session.py.
 ```
 
 ### 9.2 Next Session Prompt — Antigravity (use only after backend readiness)

@@ -86,7 +86,7 @@ Theo ADMIN_EXTENSION §9 và [ADMIN_SPEC.md](ADMIN_SPEC.md). Codex sở hữu ba
 
 ## Stage C — Admin Console
 
-### [ ] A10 — Typed Admin API Client
+### [x] A10 — Typed Admin API Client
 
 - **Agent / phụ thuộc** — Antigravity. A01 đã phê duyệt, A09 theo lịch mặc định.
 - **File chính** — frontend/src/types/admin.ts, frontend/src/lib/adminApi.ts.

@@ -168,3 +168,43 @@ Sửa ca DecompressionBombWarning vì Studio cấu hình Pillow nâng cảnh bá
 - Production TLS/CDN/R2 thật và browser E2E thuộc A15. A09 dùng MySQL thật và mô phỏng HTTPS ở biên proxy loopback.
 
 **Điểm bàn giao — A10, Typed Admin API Client, do Antigravity phụ trách.** A09 kết thúc chuỗi backend trước bàn giao frontend.
+
+## A10 — Typed Admin API Client
+
+**2026-11-18 · Antigravity · PASS**
+
+- Primary files: `frontend/src/types/admin.ts`, `frontend/src/lib/adminApi.ts`.
+- Supporting files: `frontend/src/tests/adminApi.test.ts`, `frontend/package.json` (bổ sung suite test admin).
+- Định nghĩa hoàn chỉnh toàn bộ DTOs và discriminated types cho Admin module theo `ADMIN_SPEC.md` và `ADMIN_EXTENSION.md`: `AdminIdentity`, `AdminAuthResponse`, `AdminLoginRequest`, `AdminAssetKind`, `AdminPackAsset`, `AdminPackRole`, `AdminPackStatus`, `AdminPackSummary`, `AdminPackDetail`, `AdminPackPagination`, `AdminPackPage`, `AdminPackQueryParams`, `AdminCreatePackRequest`, `AdminPatchPackRequest`, `AdminUploadAssetParams`, `AdminAssignRoleRequest`, `AdminValidationIssue`, `AdminValidationReport`, `AdminPackResult`, `AdminRequestOptions`.
+- Hiện thực API client wrapper trong `frontend/src/lib/adminApi.ts` với đầy đủ 13 endpoint Admin:
+  1. `POST /auth/login` (`login`)
+  2. `POST /auth/logout` (`logout`, xử lý 204 No Content và xóa token memory)
+  3. `GET /auth/me` (`getMe`)
+  4. `GET /packs` (`getPacks`)
+  5. `POST /packs` (`createPack`, ETag và Location)
+  6. `GET /packs/{id}` (`getPack`, ETag)
+  7. `PATCH /packs/{id}` (`updatePack`, If-Match, ETag)
+  8. `POST /packs/{id}/assets` (`uploadAsset`, multipart FormData không set manual Content-Type, If-Match)
+  9. `GET /packs/{id}/assets/{asset_id}/content` (`getAssetContent`, trả Blob)
+  10. `PUT /packs/{id}/roles/{role}` (`assignRole`, If-Match, ETag)
+  11. `POST /packs/{id}/validate` (`validatePack`, If-Match, AdminValidationReport)
+  12. `POST /packs/{id}/publish` (`publishPack`, If-Match, ETag, xử lý 422 PACK_INVALID)
+  13. `POST /packs/{id}/unpublish` (`unpublishPack`, If-Match, ETag)
+- Bảo mật và Invariants:
+  - Base URL qua `getAdminApiBaseUrl()` đọc `VITE_API_BASE_URL` (mặc định `/api/v1/admin`) và đi qua Vite proxy tại `http://localhost:5173` với `changeOrigin: false` để bảo toàn Host và Origin `http://localhost:5173`.
+  - Gửi `credentials: 'include'` trên toàn bộ các request.
+  - Quản lý CSRF token hoàn toàn trong bộ nhớ (`inMemoryCsrfToken`, `getCsrfToken`, `setCsrfToken`, `clearCsrfToken`), tự động đính kèm `X-CSRF-Token` cho các mutation sau login. Tuyệt đối không lưu mật khẩu hoặc token vào `localStorage`.
+  - Hỗ trợ `AbortSignal`, multipart `FormData`, response `204 No Content`, `ETag`/`If-Match`, error envelope `{ error: { code, message, details, request_id } }` và `FastApiValidationResponse`.
+  - Xử lý phân loại lỗi rõ ràng qua `AdminApiError` (`isUnauthorized`, `isForbidden`, `isConflict`, `isPreconditionRequired`, `isRateLimited`, `isRevisionConflict`, `isPackInvalid`, `retryAfter`). Không tự động retry bất kỳ thao tác ghi nào.
+  - TypeScript strict, không dùng `any`, có runtime type guards và validators kiểm tra phản hồi từ server. Không thay đổi hợp đồng hoặc hành vi của 7 Public API.
+
+### Bằng chứng kiểm thử
+
+| Kiểm tra | Kết quả |
+|---|---|
+| `npm run typecheck` (`tsc --noEmit`) | PASS, 0 errors với strict, exactOptionalPropertyTypes, noUncheckedIndexedAccess. |
+| `npm test` (`node --test --experimental-strip-types`) | 49/49 PASS (19 tests mới cho adminApi + 30 tests hồi quy cho public api, hotspot, studio, mix). |
+| 19 ca kiểm thử `src/tests/adminApi.test.ts` | PASS: 204 No Content, malformed responses, 401 Unauthorized, 409 Revision Conflict, 428 Precondition Required, 429 Rate Limited với Retry-After, AbortSignal cancel, và Live Backend Integration test qua proxy dev. |
+| `npm run build` (`tsc && vite build`) | PASS, bundle production `dist/` sạch sẽ. |
+
+**Task kế tiếp — A11, Login + Route Guard (Frontend). Dừng trước A11 theo đúng yêu cầu.**

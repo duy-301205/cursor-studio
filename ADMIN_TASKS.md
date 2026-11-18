@@ -34,7 +34,7 @@ Theo ADMIN_EXTENSION §9 và [ADMIN_SPEC.md](ADMIN_SPEC.md). Codex sở hữu ba
 - **Nghiệm thu / kiểm thử** — HTTP qua app chính cho login/me/logout, wrong/unknown/disabled generic error, secure flags, session fixation, absolute/idle expiry, CSRF bị thiếu/sai và Origin bị chặn. Kiểm tra DB chỉ chứa hash.
 - **PASS/FAIL** — PASS nếu toàn bộ ca auth đúng hợp đồng và T15 route/schema giữ tương thích. FAIL nếu phiên cũ còn dùng được sau revoke hoặc có secret lộ.
 
-### [ ] A04 — Authorization & Secure Bootstrap
+### [x] A04 — Authorization & Secure Bootstrap
 
 - **Agent / phụ thuộc** — Codex. A03.
 - **File chính** — backend/app/api/deps/admin.py, backend/app/cli/create_admin.py. Throttle/audit wiring và auth-router patch là supporting scope nếu cần.

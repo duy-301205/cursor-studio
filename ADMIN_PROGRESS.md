@@ -51,3 +51,23 @@ Cả migration lifecycle và hồi quy chạy trong Docker test cô lập, với
 | `CCS_RUN_MYSQL_INTEGRATION=1 python -m pytest -p no:cacheprovider tests -q` | 70 PASS. Lần đầu có asset Peach Bloom sao chép từ dev, lần sau gặp rate limit tích lũy trong process. Tách asset khỏi bản sao cô lập và restart Uvicorn test để chạy suite sạch. |
 
 **Task kế tiếp — A04, Authorization & Secure Bootstrap.** Frontend bắt đầu ở A10, do Antigravity phụ trách.
+
+## A04 — Authorization & Secure Bootstrap
+
+**2026-11-18 · Codex · PASS**
+
+- Thêm require_admin và CSRF guard dùng chung trong backend/app/api/deps/admin.py. Router dùng dependency cho /auth/me và kiểm tra CSRF cùng transaction thu hồi tại /auth/logout. Bổ sung auth audit và rate-limit wiring tại backend/app/api/v1/admin_auth.py và backend/app/core/admin_auth.py. Không tạo public signup.
+- CLI nội bộ: python -m app.cli.create_admin create USER, reset USER, disable USER và cleanup. CREATE/RESET dùng prompt không echo hoặc --password-stdin. Reset/disable thu hồi mọi phiên đang hoạt động theo transaction. Audit ghi target account, request ID và outcome, giữ actor null cho thao tác vận hành CLI.
+- MySQL chia sẻ ngưỡng 5 lần thất bại theo từng IP và tài khoản, cửa sổ UTC cố định 15 phút. Dự trữ lượt trước Argon2id và hoàn lại lượt thành công cùng transaction tạo session/audit. Trả 429 kèm Retry-After đến khi cửa sổ kết thúc. Khóa counter là HMAC, không lưu IP hoặc username thô trong limiter/audit.
+- Cleanup chạy theo lệnh vận hành, mỗi nhóm xóa tối đa 500 dòng/lượt. Xóa counter hết hạn và session hết hạn hoặc revoked từ 7 ngày trước. Tham số --audit-retention-days mặc định 90, từ chối giá trị dưới 90. Auth Admin vẫn giới hạn ở môi trường dev đã bật tường minh.
+
+### Kiểm thử
+
+| Kiểm tra | Kết quả |
+|---|---|
+| Ruff, Ruff Format và mypy | PASS trên bản sao Linux, 31 file format và 26 file typecheck. |
+| MySQL 8 và hai tiến trình Uvicorn app.main | PASS. 401 cho thiếu session, 403 thiếu CSRF, signup 404. Giới hạn IP và account cùng có hiệu lực giữa hai tiến trình. 8 yêu cầu đồng thời cho một account cho kết quả 5 lỗi credentials và 3 phản hồi 429 kèm Retry-After. |
+| CLI và audit | PASS. Tạo tài khoản bằng stdin, chuẩn hóa username, từ chối duplicate/mật khẩu ngắn, reset và disable thu hồi session trên cả hai tiến trình. Audit success/failure, cleanup retention 120 ngày và log redaction PASS. |
+| T15 và hồi quy backend | 70 PASS, đủ 7 Public API qua MySQL test. |
+
+**Task kế tiếp — A05, Admin Pack CRUD.** Frontend bắt đầu ở A10, do Antigravity phụ trách.

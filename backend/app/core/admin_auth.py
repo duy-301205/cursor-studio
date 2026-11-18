@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import secrets
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 from hmac import compare_digest, digest
@@ -79,7 +80,13 @@ def _verify_password(password: bytes, encoded: str) -> bool:
 
 
 async def login(
-    db: AsyncSession, username: str, password: bytes, old_token: str, csrf_key: bytes
+    db: AsyncSession,
+    username: str,
+    password: bytes,
+    old_token: str,
+    csrf_key: bytes,
+    *,
+    on_success: Callable[[int], Awaitable[None]],
 ) -> tuple[str, SessionIdentity] | None:
     async with db.begin():
         row = (
@@ -128,6 +135,7 @@ async def login(
         )
         db.add(session)
         await db.flush()
+        await on_success(admin.id)
         return token, SessionIdentity(session, admin, csrf)
 
 

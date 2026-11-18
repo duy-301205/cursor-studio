@@ -71,3 +71,100 @@ Cả migration lifecycle và hồi quy chạy trong Docker test cô lập, với
 | T15 và hồi quy backend | 70 PASS, đủ 7 Public API qua MySQL test. |
 
 **Task kế tiếp — A05, Admin Pack CRUD.** Frontend bắt đầu ở A10, do Antigravity phụ trách.
+
+## A05 — Admin Pack CRUD
+
+**2026-11-18 · Codex · PASS**
+
+- Thêm backend/app/api/v1/admin_packs.py và backend/app/schemas/admin_pack.py, mount router duy nhất tại backend/app/main.py. Bốn thao tác Admin gồm list có status/search/pagination, create draft, detail và PATCH metadata.
+- Dùng auth/CSRF A04, giới hạn mutation 60 lượt/phút/Admin trong MySQL và audit create/edit. Lưu placeholder do deploy cấp qua ADMIN_DRAFT_THUMBNAIL_URL (HTTPS). Admin trả null khi chưa gán thumbnail. Upload và đọc ảnh thuộc A06, gán thumbnail/role thuộc A07.
+- Giữ legacy ở chế độ chỉ đọc, khóa pack published và giữ slug sau lần publish đầu. PATCH khóa hàng pack và state theo thứ tự, kiểm If-Match trước khi ghi. PATCH no-op giữ revision, thay đổi hợp lệ tăng revision. Từ chối và rollback nếu ID do DB cấp vượt giới hạn JavaScript.
+
+| Kiểm tra | Kết quả |
+|---|---|
+| Ruff, Ruff Format, mypy | PASS trên bản sao Linux (33 file format, 28 file typecheck). |
+| MySQL 8 và HTTP qua app.main | PASS. Auth/CSRF, metadata strict, category, 16 KiB, list/filter/pagination, draft 201, slug conflict, ETag 428/422/409, no-op và cạnh tranh hai PATCH cùng ETag. |
+| Trạng thái pack và DTO | PASS. Legacy/published bị khóa, giữ slug sau publish, registry chiếu URL Admin và ẩn storage key. Draft 404 ở public detail/download và không vào Gallery. |
+| Audit, guard ID và throttle | PASS. Audit create/edit và lỗi, rollback ID vượt 2^53−1, 429 và Retry-After khi hết lượt. |
+| T15 và hồi quy backend | 70 PASS, đúng 7 operation trong public OpenAPI. |
+
+Các thao tác migration/fixture chỉ chạy trên database test cô lập. **Task kế tiếp — A06, Admin Asset Upload & Registry.**
+
+## A06 — Admin Asset Upload & Registry
+
+**2026-11-18 · Codex · PASS**
+
+- Thêm backend/app/api/v1/admin_assets.py và backend/app/services/admin_assets.py. Supporting changes gồm mount router tại backend/app/main.py và tách factory SDK dùng chung tại backend/app/services/storage.py.
+- Multipart file + kind giới hạn 2 MiB/file và 32 KiB overhead. Preview chuẩn hóa RGBA PNG 32/48, thumbnail WebP tối đa 512×512, CUR tĩnh được kiểm DIB/XOR/AND và hotspot. Kiểm tra magic, payload, pixel cap, animation và chuyển đổi đồng bộ trong worker có giới hạn.
+- Upload xác thực/CSRF, kiểm If-Match lại dưới khóa pack/state, giới hạn 128 asset/pack và 20 upload/phút/Admin. Upload thành công giữ nguyên revision. Registry lưu key UUID, hash SHA-256 và geometry. GET content chỉ trả ảnh có xác thực, đúng pack, MIME cố định và no-store, kiểm lại hash.
+- Private Local cần ADMIN_ASSET_LOCAL_ROOT là đường dẫn tuyệt đối nằm ngoài vùng public static. R2 dùng ADMIN_ASSET_R2_BUCKET riêng với cấu hình SDK sẵn có và conditional PUT. Adapter đọc managed URL theo key đã có để A08 dùng. Nếu lưu/commit gặp lỗi, tra registry rồi mới xóa object chưa đăng ký. Nếu không xác minh được hoặc lỗi cleanup, ghi request ID và key nội bộ để đối soát.
+
+| Kiểm tra | Kết quả |
+|---|---|
+| Ruff, Ruff Format, mypy | PASS trên bản sao Linux, 35 file format và 30 file typecheck. |
+| HTTP và MySQL 8 qua app.main | PASS. PNG/WebP/CUR hợp lệ, 401/403 trước upload, 428/409, 413/415/422, quota 128, 429, không tăng revision và kiểm digest. |
+| Local và quyền riêng tư | PASS. Cấm overwrite, traversal, symlink, pack ID sai, hỏng digest, đọc CUR qua route ảnh và truy cập trực tiếp qua public static. |
+| R2 stub và fault injection | PASS cho điều kiện create-only, bounded read/close, rollback registry và xóa orphan khi DB commit lỗi hoặc SDK báo lỗi sau ghi. R2 staging thật kiểm ở A15. |
+| T15 và hồi quy backend | 70 PASS trên database test riêng đã migration. |
+
+Sửa ca DecompressionBombWarning vì Studio cấu hình Pillow nâng cảnh báo pixel thành exception. Đã xác minh API từ chối ảnh vượt giới hạn bằng 415. Public media gateway và đối soát định kỳ thuộc A08. **Task kế tiếp — A07, Eight-Role Assignment.** Frontend bắt đầu ở A10.
+
+## A07 — Eight-Role Assignment
+
+**2026-11-18 · Codex · PASS**
+
+- Thêm backend/app/services/pack_validator.py, mở rộng backend/app/api/v1/admin_packs.py và DTO nhỏ tại backend/app/schemas/admin_pack.py.
+- PUT /api/v1/admin/packs/{id}/roles/{role} ghi tối đa một binding cho mỗi role canonical. Cho phép draft thiếu role, ghi đè binding bằng asset hợp lệ và trả ETag mới khi thay đổi. PATCH hỗ trợ gán hoặc bỏ thumbnail bằng ID thuộc pack. Khóa cùng thứ tự pack/state, kiểm If-Match trong transaction, audit thay đổi và giữ revision với no-op.
+- Xác minh key, loại asset, SHA-256, geometry 32/48, bounds và hotspot khớp header CUR. So raster RGBA đã giải mã, bao gồm alpha và bỏ qua RGB ở pixel hoàn toàn trong suốt. Pack published và legacy vẫn chỉ đọc qua các thao tác này.
+
+| Kiểm tra | Kết quả |
+|---|---|
+| Ruff, Ruff Format, mypy | PASS trên bản sao Linux, 36 file format và 31 file typecheck. |
+| MySQL 8 và HTTP qua app.main | PASS. Auth/CSRF, role lạ, asset khác pack/sai kind, mismatch kích thước/pixel, hotspot kiểu sai/ngoài bounds/lệch header, hash hỏng và storage thiếu. |
+| Binding và concurrency | PASS. Gán đủ 8 role, thay 32px bằng 48px, PATCH gán/bỏ thumbnail, no-op, khóa published, stale ETag, audit. Hai editor cùng ETag cho đúng một 200 và một 409. |
+| T15 và hồi quy backend | 70 PASS trên database test cô lập đã migration. |
+
+**Task kế tiếp — A08, Publish / Unpublish Service.** Frontend bắt đầu ở A10.
+
+## A08 — Publish / Unpublish Service
+
+**2026-11-18 · Codex · PASS**
+
+- Primary: backend/app/services/pack_publisher.py và backend/app/api/v1/admin_packs.py. Supporting: backend/app/api/deps/admin.py (error details), backend/app/api/v1/catalog.py (adapter download), backend/app/main.py (managed media GET/HEAD), backend/app/services/admin_assets.py và storage.py (inventory, missing-file classification), backend/app/services/pack_validator.py (bytes CUR đã xác minh), backend/app/cli/cleanup_pack_assets.py.
+- Validate snapshot có report theo revision. Publish kiểm lại thumbnail, đủ 8 role, asset integrity và ZIP/INF 15 slot ngoài transaction giữ khóa. Sau đó khóa pack/state, đối chiếu snapshot, cập nhật projection/status/revision/audit trong một transaction. Unpublish giữ bindings, projection IDs và object. Re-publish giữ ID, slug và download_count. Rate limit validate/publish 5 lượt/phút/pack.
+- Managed media chỉ phục vụ asset khớp binding và projection của pack published, kiểm hash và trả no-store cho browser/CDN. Local dùng /static/samples/managed/... trước mount static. Khi triển khai R2, proxy phải rewrite path managed dưới PUBLIC_CDN_BASE_URL đến /internal/managed/<pack-id>/<file>, bật bypass cache cho namespace managed và giữ bucket private.
+- Cleanup theo pack: python -m app.cli.cleanup_pack_assets PACK_ID. Kiểm trong DB dưới khóa, giữ binding/projection và object mới, đối soát Local/R2 theo inventory với grace 24 giờ. Scheduler và xác nhận R2/CDN thật thuộc triển khai sau.
+
+| Kiểm tra | Kết quả |
+|---|---|
+| Ruff, Ruff Format, mypy | PASS trên bản sao Linux, 38 file format và 33 file typecheck. |
+| Validate và rollback | PASS. Thiếu thumbnail/role, file thiếu/hỏng, 503 storage timeout mô phỏng, throttle/Retry-After và rollback projection trên MySQL 8. |
+| HTTP lifecycle qua app.main | PASS. Race publish/publish, unpublish/unpublish và publish/edit. Public Gallery, share 200/410, ZIP hợp lệ với 15 slot, GET/HEAD 200 khi published và 404 khi draft, giữ ID/counter khi republish. |
+| CDN/R2 và cleanup | PASS cho edge/cache và R2 inventory mô phỏng, CLI Local xóa orphan quá 24 giờ và giữ asset đang tham chiếu/còn mới. CDN/R2 staging thật NOT RUN, thuộc A15. |
+| Backend regression T15 | 70 PASS trên database test cô lập, 7 Public API giữ hợp đồng. |
+
+**Task kế tiếp — A09, Admin Backend Security & Regression.** Frontend bắt đầu ở A10.
+
+## A09 — Admin Backend Security & Regression
+
+**2026-11-18 · Codex · PASS**
+
+- Thêm 9 bài kiểm thử trong backend/tests/test_admin_security.py và backend/tests/test_admin_packs.py. Mở rộng backend/tests/conftest.py để dùng HTTP client hiện có cho hai worker, tạo tài khoản test bằng CLI và dọn fixture theo từng test. Chỉ thay đổi test code ở A09.
+- Bộ security kiểm cookie/Origin/CSRF, session expiry/rotation/revoke, thiếu quyền trên mọi mutation, giới hạn đăng nhập 5 lần theo IP và tài khoản dùng chung hai worker, audit và log redaction.
+- Bộ pack kiểm payload sai/quá lớn, ownership, integrity, stale ETag, cạnh tranh publish/unpublish, rollback khi lỗi storage/DB, cleanup, Share 410, ZIP/INF 15 slot và media no-store.
+
+| Kiểm tra | Kết quả |
+|---|---|
+| `ruff check app alembic tests`, `ruff format --check app alembic tests`, `mypy app alembic` | PASS trên bản sao Linux, 40 file format và 33 file typecheck. |
+| `alembic upgrade head` | PASS trong MySQL 8 test cô lập. |
+| `python -m pytest -p no:cacheprovider tests -q -rs` với cả hai opt-in | 79 PASS, 0 skip, khoảng 104 giây. Bao gồm 9 bài mới và toàn bộ T15 cho 7 Public API. |
+| Pytest với cả hai opt-in tắt | 62 PASS, 17 integration skip theo cấu hình mặc định. |
+
+### Chạy lại suite đầy đủ
+
+- Dùng database `ccs_test_*` cô lập, `DATABASE_HOST=db`, Local storage và public API base `http://localhost:8000`. Chạy Alembic trước. Dùng private root ghi được bên ngoài static.
+- Chạy Uvicorn `app.main:app` trên loopback cổng 8000 và 8001 với `--forwarded-allow-ips 127.0.0.1`. Bật seed trên worker 8000, tắt seed trên worker 8001. Cả hai có chung DB, `ADMIN_AUTH_ENABLED=true`, `ADMIN_ORIGIN=https://localhost`, secret CSRF test và URL placeholder HTTPS.
+- Trong container test chạy với `CCS_RUN_MYSQL_INTEGRATION=1`, `CCS_RUN_ADMIN_INTEGRATION=1`, cùng `ADMIN_ASSET_LOCAL_ROOT` với hai worker và `CCS_ADMIN_TEST_LOGS` chứa hai đường dẫn log phân tách bằng dấu phẩy.
+- Production TLS/CDN/R2 thật và browser E2E thuộc A15. A09 dùng MySQL thật và mô phỏng HTTPS ở biên proxy loopback.
+
+**Điểm bàn giao — A10, Typed Admin API Client, do Antigravity phụ trách.** A09 kết thúc chuỗi backend trước bàn giao frontend.

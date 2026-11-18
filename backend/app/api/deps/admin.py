@@ -24,7 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.admin_auth import SessionIdentity, active_session, touch_session, utc_now
 from app.db.session import get_db
 from app.models.admin_user import AdminAuditEvent, AdminRateLimit
-from app.schemas.catalog import CatalogError, ErrorResponse
+from app.schemas.catalog import CatalogError, ErrorDetail, ErrorResponse
 
 ADMIN_PREFIX = "/api/v1/admin"
 _CSRF = re.compile(r"[0-9a-f]{64}")
@@ -35,12 +35,19 @@ AdminDatabase = Annotated[AsyncSession, Depends(get_db)]
 
 class AuthProblem(Exception):
     def __init__(
-        self, status: int, code: str, message: str, *, retry_after: int | None = None
+        self,
+        status: int,
+        code: str,
+        message: str,
+        *,
+        retry_after: int | None = None,
+        details: list[ErrorDetail] | None = None,
     ) -> None:
         self.status = status
         self.code = code
         self.message = message
         self.retry_after = retry_after
+        self.details = details or []
 
 
 class AuthRoute(APIRoute):
@@ -73,7 +80,12 @@ class AuthRoute(APIRoute):
 
 def _error(exc: AuthProblem, request_id: str) -> JSONResponse:
     body = ErrorResponse(
-        error=CatalogError(code=exc.code, message=exc.message, request_id=request_id)
+        error=CatalogError(
+            code=exc.code,
+            message=exc.message,
+            details=exc.details,
+            request_id=request_id,
+        )
     )
     headers = (
         {"Retry-After": str(exc.retry_after)} if exc.retry_after is not None else None

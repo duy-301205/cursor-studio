@@ -43,6 +43,8 @@ from app.schemas.catalog import (
     PackSummary,
     Pagination,
 )
+from app.services.admin_assets import ManagedAssetStorage, private_storage
+from app.services.pack_publisher import managed_prefix
 from app.services.storage import Storage, StorageError, create_storage
 from app.services.zip_packager import AssetUnavailable, PackIncomplete, build_pack_zip
 
@@ -274,8 +276,21 @@ async def pack_detail(slug: str, response: Response, session: Session) -> PackDe
 
 
 @lru_cache(maxsize=1)
-def _download_storage() -> Storage:
-    return create_storage(Settings.model_validate({}))
+def _download_settings() -> Settings:
+    return Settings.model_validate({})
+
+
+@lru_cache(maxsize=2)
+def _download_storage(managed: bool) -> Storage:
+    settings = _download_settings()
+    if managed:
+        return ManagedAssetStorage(private_storage(settings), managed_prefix(settings))
+    return create_storage(settings)
+
+
+def _storage_for_urls(urls: dict[str, str]) -> Storage:
+    prefix = managed_prefix(_download_settings()) + "managed/"
+    return _download_storage(any(url.startswith(prefix) for url in urls.values()))
 
 
 async def _zip_chunks(data: bytes) -> AsyncIterator[bytes]:
@@ -337,7 +352,7 @@ async def download_pack(
         await session.rollback()
         request_id = request.state.request_id
         try:
-            storage = await to_thread.run_sync(_download_storage)
+            storage = await to_thread.run_sync(_storage_for_urls, urls)
             filename, binary = await build_pack_zip(
                 pack.title, pack.slug, urls, storage
             )

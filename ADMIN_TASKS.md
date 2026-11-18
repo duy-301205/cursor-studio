@@ -44,7 +44,7 @@ Theo ADMIN_EXTENSION §9 và [ADMIN_SPEC.md](ADMIN_SPEC.md). Codex sở hữu ba
 
 ## Stage B — Backend quản lý bộ
 
-### [ ] A05 — Admin Pack CRUD
+### [x] A05 — Admin Pack CRUD
 
 - **Agent / phụ thuộc** — Codex. A04.
 - **File chính** — backend/app/api/v1/admin_packs.py, backend/app/schemas/admin_pack.py. Router mount/test là supporting scope.
@@ -52,7 +52,7 @@ Theo ADMIN_EXTENSION §9 và [ADMIN_SPEC.md](ADMIN_SPEC.md). Codex sở hữu ba
 - **Nghiệm thu / kiểm thử** — HTTP test filter/search/pagination, create 201, duplicate 409, missing/stale If-Match, category sai, no auth, published/legacy blocked, draft 404 public. Kiểm tra baseline T15.
 - **PASS/FAIL** — PASS nếu draft và concurrency đúng trên app chính. FAIL nếu draft xuất hiện công khai hoặc client ghi được status/URL tùy ý.
 
-### [ ] A06 — Admin Asset Upload & Registry
+### [x] A06 — Admin Asset Upload & Registry
 
 - **Agent / phụ thuộc** — Codex. A05, A02.
 - **File chính** — backend/app/services/admin_assets.py, backend/app/api/v1/admin_assets.py. Storage/config/main và tests là supporting scope cần duyệt cụ thể.
@@ -60,7 +60,7 @@ Theo ADMIN_EXTENSION §9 và [ADMIN_SPEC.md](ADMIN_SPEC.md). Codex sở hữu ba
 - **Nghiệm thu / kiểm thử** — Test bytes thật, decode, CUR payload/hotspot, spoof/truncated/oversize, symlink/traversal, B05 limits, ownership, CSRF trước upload, orphan khi DB/SDK lỗi. Kiểm private direct URL và R2 stub/local; thử R2 staging ở A15.
 - **PASS/FAIL** — PASS nếu file tốt đọc được bằng Admin và draft private. FAIL nếu parser bỏ qua payload, URL client được dùng làm key hoặc upload lỗi để lộ asset.
 
-### [ ] A07 — Eight-Role Assignment
+### [x] A07 — Eight-Role Assignment
 
 - **Agent / phụ thuộc** — Codex. A06.
 - **File chính** — backend/app/services/pack_validator.py, backend/app/api/v1/admin_packs.py.
@@ -68,7 +68,7 @@ Theo ADMIN_EXTENSION §9 và [ADMIN_SPEC.md](ADMIN_SPEC.md). Codex sở hữu ba
 - **Nghiệm thu / kiểm thử** — Gán/reassign 8 role theo enum. Thử unknown role, duplicate upsert, foreign asset, wrong kind, hotspot 32/48, mismatch bytes, stale revision và race hai editor.
 - **PASS/FAIL** — PASS nếu mỗi role có tối đa một binding hợp lệ và published edit bị chặn. FAIL nếu có cross-pack binding hoặc ghi đè khi stale.
 
-### [ ] A08 — Publish / Unpublish Service
+### [x] A08 — Publish / Unpublish Service
 
 - **Agent / phụ thuộc** — Codex. A07.
 - **File chính** — backend/app/services/pack_publisher.py, backend/app/api/v1/admin_packs.py. Public media wiring, proxy config staging và tests là supporting scope.
@@ -76,7 +76,7 @@ Theo ADMIN_EXTENSION §9 và [ADMIN_SPEC.md](ADMIN_SPEC.md). Codex sở hữu ba
 - **Nghiệm thu / kiểm thử** — Validate thiếu role, file corrupt/missing/storage timeout, stale/parallel publish/edit/unpublish, DB rollback, no download_count side effect. HTTP public Gallery/detail/download/share và direct asset GET/HEAD theo trạng thái. Inspect ZIP/15 ordered slots và thử CDN cache bypass.
 - **PASS/FAIL** — PASS nếu chỉ pack đầy đủ hiện công khai và request media mới bị chặn sau unpublish. FAIL nếu commit một phần hoặc draft bytes lộ qua static/CDN.
 
-### [ ] A09 — Admin Backend Security & Regression
+### [x] A09 — Admin Backend Security & Regression
 
 - **Agent / phụ thuộc** — Codex. A08.
 - **File chính** — backend/tests/test_admin_security.py, backend/tests/test_admin_packs.py.

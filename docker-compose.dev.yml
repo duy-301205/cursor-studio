@@ -36,8 +36,15 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
       STORAGE_BACKEND: local
       AUTO_SEED: "${AUTO_SEED:-true}"
+      ADMIN_AUTH_ENABLED: "${ADMIN_AUTH_ENABLED:-false}"
+      ADMIN_ORIGIN: ${ADMIN_ORIGIN:-http://localhost:5173}
+      ADMIN_ALLOW_LOOPBACK_HTTP: "${ADMIN_ALLOW_LOOPBACK_HTTP:-false}"
+      ADMIN_CSRF_KEY: ${ADMIN_CSRF_KEY:-}
+      ADMIN_DRAFT_THUMBNAIL_URL: ${ADMIN_DRAFT_THUMBNAIL_URL:-}
+      ADMIN_ASSET_LOCAL_ROOT: /var/lib/cursor-studio/admin-assets
     volumes:
       - ./backend:/app
+      - admin_dev_assets:/var/lib/cursor-studio/admin-assets
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
@@ -46,3 +53,4 @@ services:
 
 volumes:
   mysql_dev_data:
+  admin_dev_assets:

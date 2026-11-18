@@ -12,14 +12,18 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    host: true,
+    host: '127.0.0.1',
     proxy: {
+      '/api/v1/admin/': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: false,
+      },
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'http://127.0.0.1:8000',
         changeOrigin: true,
       },
       '/static': {
-        target: 'http://localhost:8000',
+        target: 'http://127.0.0.1:8000',
         changeOrigin: true,
       },
     },

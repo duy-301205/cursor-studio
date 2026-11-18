@@ -31,6 +31,10 @@ class InvalidAssetLocation(StorageError):
     """The asset URL or key is outside the allowed storage namespace."""
 
 
+class AssetNotFound(StorageError):
+    """An expected trusted object is missing."""
+
+
 class AssetTooLarge(StorageError):
     """The asset exceeds the requested byte budget."""
 
@@ -132,6 +136,8 @@ class LocalStorage:
                 raise StorageError("Asset is not a regular file")
             with path.open("rb") as stream:
                 return _bounded(stream.read(max_bytes + 1), max_bytes)
+        except FileNotFoundError:
+            raise AssetNotFound("Unable to read local asset") from None
         except TimeoutError:
             raise StorageError("Asset read timed out") from None
         except (OSError, RuntimeError):
@@ -168,30 +174,23 @@ class R2Storage:
                 body.close()
         except (TimeoutError, ConnectTimeoutError, ReadTimeoutError):
             raise StorageError("Asset read timed out") from None
-        except (BotoCoreError, ClientError, OSError):
+        except ClientError as exc:
+            error = exc.response.get("Error", {}).get("Code")
+            if error in {"NoSuchKey", "NotFound", "404"}:
+                raise AssetNotFound(
+                    "Unable to read asset from object storage"
+                ) from None
+            raise StorageError("Unable to read asset from object storage") from None
+        except (BotoCoreError, OSError):
             raise StorageError("Unable to read asset from object storage") from None
 
 
-def create_storage(settings: Settings) -> Storage:
-    """Build the storage adapter from service-side settings."""
-    if settings.storage_backend == "local":
-        return LocalStorage(
-            _SAMPLES_DIRECTORY,
-            f"{str(settings.public_api_base_url).rstrip('/')}/static/samples",
-        )
-
+def create_r2_read_client(settings: Settings) -> _R2Client:
+    """Create the fixed-endpoint client shared by trusted R2 adapters."""
     endpoint = settings.r2_endpoint
-    bucket = settings.r2_bucket
     key_id = settings.r2_access_key_id
     secret = settings.r2_secret_access_key
-    public_base = settings.public_cdn_base_url
-    if (
-        endpoint is None
-        or bucket is None
-        or key_id is None
-        or secret is None
-        or public_base is None
-    ):
+    if endpoint is None or key_id is None or secret is None:
         raise StorageError("Incomplete object storage configuration")
 
     endpoint_url = _base_url(str(endpoint)).rstrip("/")
@@ -214,4 +213,19 @@ def create_storage(settings: Settings) -> Storage:
         )
     except (BotoCoreError, ClientError, ValueError):
         raise StorageError("Unable to configure object storage") from None
-    return R2Storage(client, bucket, str(public_base))
+    return client
+
+
+def create_storage(settings: Settings) -> Storage:
+    """Build the storage adapter from service-side settings."""
+    if settings.storage_backend == "local":
+        return LocalStorage(
+            _SAMPLES_DIRECTORY,
+            f"{str(settings.public_api_base_url).rstrip('/')}/static/samples",
+        )
+
+    bucket = settings.r2_bucket
+    public_base = settings.public_cdn_base_url
+    if bucket is None or public_base is None:
+        raise StorageError("Incomplete object storage configuration")
+    return R2Storage(create_r2_read_client(settings), bucket, str(public_base))

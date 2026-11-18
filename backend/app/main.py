@@ -8,6 +8,7 @@ import mimetypes
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Annotated, Literal
+from uuid import UUID
 
 from anyio import to_thread
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
@@ -19,12 +20,23 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from starlette.staticfiles import StaticFiles
 from starlette.types import Receive, Scope, Send
 
+from app.api.v1.admin_assets import router as admin_assets_router
 from app.api.v1.admin_auth import router as admin_auth_router
+from app.api.v1.admin_packs import router as admin_packs_router
 from app.api.v1.catalog import router as catalog_router
 from app.api.v1.studio import router as studio_router
 from app.core.config import Settings
 from app.db.seed import SAMPLES_DIRECTORY, seed_development
 from app.db.session import DatabaseState, database_lifespan, get_db
+from app.models.admin_user import AssetKind
+from app.schemas.admin_pack import MAX_SAFE_ID
+from app.services.admin_assets import asset_key, private_storage
+from app.services.pack_publisher import (
+    managed_prefix,
+    published_asset,
+    read_published_bytes,
+)
+from app.services.storage import AssetNotFound, StorageError
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +91,8 @@ app = FastAPI(
     redoc_url=None,
 )
 app.include_router(admin_auth_router)
+app.include_router(admin_assets_router)
+app.include_router(admin_packs_router)
 app.include_router(catalog_router)
 app.include_router(studio_router)
 
@@ -91,6 +105,85 @@ async def _serve_samples(scope: Scope, receive: Receive, send: Send) -> None:
         await Response(status_code=404)(scope, receive, send)
         return
     await _sample_files(scope, receive, send)
+
+
+_MEDIA_HEADERS = {
+    "Cache-Control": "no-store",
+    "CDN-Cache-Control": "no-store",
+    "Cloudflare-CDN-Cache-Control": "no-store",
+    "X-Content-Type-Options": "nosniff",
+}
+_MEDIA_TYPES = {
+    "png": (AssetKind.PREVIEW, "image/png"),
+    "webp": (AssetKind.THUMBNAIL, "image/webp"),
+    "cur": (AssetKind.CURSOR, "application/octet-stream"),
+}
+
+
+@app.api_route(
+    "/static/samples/managed/{pack_id}/{filename}",
+    methods=["GET", "HEAD"],
+    include_in_schema=False,
+)
+@app.api_route(
+    "/internal/managed/{pack_id}/{filename}",
+    methods=["GET", "HEAD"],
+    include_in_schema=False,
+)
+async def managed_media(
+    pack_id: str,
+    filename: str,
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Response:
+    headers = dict(_MEDIA_HEADERS)
+    backend = request.state.storage_backend
+    local_route = request.url.path.startswith("/static/samples/")
+    if (
+        (local_route and (backend != "local" or request.state.app_env != "development"))
+        or (not local_route and backend != "r2")
+        or not pack_id.isascii()
+        or not pack_id.isdecimal()
+        or len(pack_id) > 16
+        or not 1 <= int(pack_id) <= MAX_SAFE_ID
+        or str(int(pack_id)) != pack_id
+    ):
+        return Response(status_code=404, headers=headers)
+    raw_id, _, extension = filename.rpartition(".")
+    format_info = _MEDIA_TYPES.get(extension)
+    if format_info is None:
+        return Response(status_code=404, headers=headers)
+    kind, mime = format_info
+    try:
+        asset_id = UUID(raw_id)
+        if str(asset_id) != raw_id:
+            raise ValueError("Noncanonical UUID")
+    except ValueError:
+        return Response(status_code=404, headers=headers)
+    key = asset_key(int(pack_id), asset_id, kind)
+    try:
+        settings = Settings.model_validate({})
+        async with db.begin():
+            asset = await published_asset(
+                db, int(pack_id), key, managed_prefix(settings) + key
+            )
+        if asset is None:
+            return Response(status_code=404, headers=headers)
+        content = await read_published_bytes(private_storage(settings), asset)
+    except AssetNotFound:
+        return Response(status_code=404, headers=headers)
+    except (StorageError, SQLAlchemyError, RuntimeError):
+        return Response(status_code=503, headers=headers)
+    headers["Content-Length"] = str(len(content))
+    headers["Vary"] = "Origin"
+    origin = request.headers.get("origin")
+    if origin is not None and origin in settings.cors_origins:
+        headers["Access-Control-Allow-Origin"] = origin
+    return Response(
+        content=content if request.method == "GET" else None,
+        media_type=mime,
+        headers=headers,
+    )
 
 
 app.mount("/static/samples", _serve_samples, name="samples")

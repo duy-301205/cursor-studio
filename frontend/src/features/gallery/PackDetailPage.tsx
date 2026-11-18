@@ -11,9 +11,11 @@ import {
   ShieldCheck,
   MousePointer,
   HelpCircle,
+  Plus,
 } from 'lucide-react';
 import { apiClient, ApiError } from '../../lib/api';
 import { InteractiveSandbox } from '../../components/InteractiveSandbox';
+import { useLocalMix } from '../mix/mixStorage';
 import type { PackDetail, CursorAsset, CursorRole, PackCursor } from '../../types/api';
 
 const ROLE_DISPLAY_NAMES: Record<CursorRole, { name: string; slot: string; description: string }> = {
@@ -39,6 +41,10 @@ export function PackDetailPage(): React.ReactElement {
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const [downloadSuccess, setDownloadSuccess] = useState<boolean>(false);
+
+  // Mix & Match state
+  const { assignRole, mix } = useLocalMix();
+  const [addedRoleToast, setAddedRoleToast] = useState<string | null>(null);
 
   // Fetch pack details by slug
   useEffect(() => {
@@ -210,6 +216,15 @@ export function PackDetailPage(): React.ReactElement {
           <ArrowLeft className="w-4 h-4" />
           Back to Gallery
         </NavLink>
+        {addedRoleToast && (
+          <div
+            role="status"
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-brand text-white text-xs font-semibold shadow-md animate-fadeIn"
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            <span>{addedRoleToast}</span>
+          </div>
+        )}
       </div>
 
       {/* ============================================================ */}
@@ -361,10 +376,35 @@ export function PackDetailPage(): React.ReactElement {
                   />
                 </div>
 
-                {/* Role Footnote */}
+                {/* Role Footnote & Add to Mix Action */}
                 <div className="pt-2 border-t border-line/60 flex items-center justify-between text-[11px] text-muted">
                   <span>{item.cursor_file_url.endsWith('.ani') ? '.ani dynamic' : '.cur static'}</span>
-                  <span className="font-mono">ID #{item.id}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      assignRole(item.role_type, {
+                        pack_id: pack.id,
+                        pack_title: pack.title,
+                        pack_slug: pack.slug,
+                        role_type: item.role_type,
+                        preview_png_url: item.preview_png_url,
+                        cursor_file_url: item.cursor_file_url,
+                        hotspot_x: item.hotspot_x,
+                        hotspot_y: item.hotspot_y,
+                      });
+                      setAddedRoleToast(`Added ${roleInfo.name} to Mix & Match dock!`);
+                      setTimeout(() => setAddedRoleToast(null), 3000);
+                    }}
+                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold transition-colors ${
+                      mix.roles[item.role_type]?.pack_id === pack.id
+                        ? 'bg-brand text-white'
+                        : 'bg-brand-soft text-brand hover:bg-brand/20'
+                    }`}
+                    title={`Add this ${roleInfo.name} cursor to your Mix & Match dock`}
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>{mix.roles[item.role_type]?.pack_id === pack.id ? 'In Mix' : 'Add to Mix'}</span>
+                  </button>
                 </div>
               </div>
             );

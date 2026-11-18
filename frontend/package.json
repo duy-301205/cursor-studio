@@ -8,9 +8,10 @@
     "build": "tsc && vite build",
     "typecheck": "tsc --noEmit",
     "preview": "vite preview",
-    "test": "node --test --experimental-strip-types src/tests/api.test.ts"
+    "test": "node --test --experimental-strip-types src/tests/api.test.ts src/tests/hotspot.test.ts src/tests/studio.test.ts src/tests/mix.test.ts"
   },
   "dependencies": {
+    "@imgly/background-removal": "^1.7.0",
     "lucide-react": "^0.460.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

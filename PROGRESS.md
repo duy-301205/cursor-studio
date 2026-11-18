@@ -1,9 +1,9 @@
 # PROGRESS.md — Project State Tracker, Decisions & Debugging Log
 
 > **Project:** Custom Cursor Studio & Library | **Tracking schema:** v1.0  
-> **Last updated:** 2026-11-17 | **Status:** IN_PROGRESS
+> **Last updated:** 2026-11-18 | **Status:** IN_PROGRESS
 >
-> **Current phase:** P3 — UI / Studio | **Next task:** T20
+> **Current phase:** P4 — Production / QA | **Next task:** T23
 >
 > **Important:** Trạng thái bên dưới là template ban đầu; **không** có task kỹ thuật nào được đánh dấu PASS trước khi Agent thực sự chạy code/test.
 
@@ -12,17 +12,17 @@
 | Field | Current value | Update rule |
 |---|---|---|
 | Overall status | `IN_PROGRESS` | `NOT_STARTED / IN_PROGRESS / BLOCKED / RELEASE_READY / RELEASED` |
-| Active Phase | P3 — UI / Studio | Đổi khi phase gate pass |
-| Active Task | `T20` — Hotspot picker and lazy AI module (TODO, Antigravity) | Một task primary tại một thời điểm |
+| Active Phase | P4 — Production / QA | Đổi khi phase gate pass |
+| Active Task | `T23` — Production compose and Caddy HTTPS setup (TODO, Codex) | Một task primary tại một thời điểm |
 | Backend Owner | Codex | Owner changes require explicit agreement |
 | Frontend Owner | Antigravity | Start after API shape confirmed |
 | Target stack | Python 3.12, FastAPI, MySQL 8.0, React 18, Vite, TS strict | Change via CR |
 | P0 scope | 7 endpoints, 8 product roles, 15 Windows slots | Do not silently expand |
 | Latest passing build | Vite 5.4.21 React 18 TS build (`dist/`), `ccs-backend:t15-dev` | Command + evidence |
-| Latest passing tests | T19, 2026-11-17. Live Browser E2E verification với Docker backend thực tế (PackDetailPage 8 roles, InteractiveSandbox 8 zones [data-cursor-role], independent sandbox theme [data-sandbox-theme], real Windows ZIP download /api/v1/packs/2/download, 4-step install guide, 404 not found handler, responsive 375px, 0 console errors) PASS. | Count + command + date |
-| Latest release decision | `NO-GO — not implemented` | Gate-based, not intuition |
-| Known blockers | License review, future Windows VM validation | Assign before launch |
-| Next handoff | Antigravity T20 — Hotspot picker and lazy AI module | Copy prompt at bottom |
+| Latest passing tests | T22, 2026-11-18. Live Browser Subagent E2E Verification với Docker backend thực tế (MixMatchDock 8 roles rack & mobile strip, localStorage ccs.mix.v1 schema validation, MixPage composer, catalog quick-picker modal, POST /api/v1/studio/share link creation with 90-day expiry, read-only /mix/:code view with explicit 'Use this mix' import per F06, 30/30 node:test unit/integration tests PASS, 0 console errors) PASS. | Count + command + date |
+| Latest release decision | `NO-GO — Phase 4 pending` | Gate-based, not intuition |
+| Known blockers | License review (AGPL-3.0 for @imgly), future Windows VM validation | Assign before launch |
+| Next handoff | Codex T23 — Production compose and Caddy HTTPS setup | Copy prompt at bottom |
 
 ## 2. Phase Status Board
 
@@ -30,9 +30,9 @@
 |---|---|---|---|---:|---|---|
 | P1 — Foundation | T01–T07 | Codex | DONE | 7/7 | Healthy Docker, 5 cat, ≥2 seeded full packs | T07 fresh startup, assets, idempotency and logs PASS. |
 | P2 — APIs / Security | T08–T15 | Codex | DONE | 8/8 | 7 endpoints validated, 15-slot ZIP & CUR tests | T15 Compose, MySQL and cross-endpoint pytest PASS. |
-| P3 — UI / Studio | T16–T22 | Antigravity | IN_PROGRESS | 4/7 | Gallery, Sandbox, Studio, Mix & Share E2E | T16 scaffold, T17 typed client, T18 GalleryPage, T19 Sandbox & Detail live PASS. |
+| P3 — UI / Studio | T16–T22 | Antigravity | DONE | 7/7 | Gallery, Sandbox, Studio, Mix & Share E2E | T16–T22 all PASS (Live Browser E2E, 30 node tests, strict typecheck, Vite build). |
 | P4 — Production | T23–T25 | Both; owner per task | TODO | 0/3 | HTTPS, backup restore, CI, Windows QA, license | Pending |
-| **TOTAL** | **T01–T25** | — | **IN_PROGRESS** | **19/25** | **Release gates all PASS** | **T01–T19 PASS** |
+| **TOTAL** | **T01–T25** | — | **IN_PROGRESS** | **22/25** | **Release gates all PASS** | **T01–T22 PASS** |
 
 **Allowed status:** `TODO`, `IN_PROGRESS`, `BLOCKED`, `IN_REVIEW`, `DONE`, `SKIPPED_WITH_APPROVAL`. No `DONE` unless AC and evidence complete. `SKIPPED_WITH_APPROVAL` must record Product Owner, why, risk and follow-up.
 
@@ -59,14 +59,87 @@
 | T17 | API client & DTO | Antigravity | DONE | 7 endpoints typed DTO, 8 roles, custom ApiError, AbortSignal, Blob/FormData, 11 node:test PASS, typecheck strict PASS. |
 | T18 | Gallery / PackCard | Antigravity | DONE | PackCard Hover-to-Test CSS cursor hotspot, GalleryPage API-driven categories, 250ms debounced search, sort, URL sync, Try sticky tester, mobile 375px PASS. |
 | T19 | Sandbox / Pack Detail | Antigravity | DONE | PackDetailPage 8 roles fetch, InteractiveSandbox 8 zones, independent sandbox theme (data-sandbox-theme), real backend ZIP download, 404 handling, 4-step install guide PASS. |
-| T20 | Hotspot picker / lazy AI | Antigravity | TODO | — |
-| T21 | Studio Canvas / Export | Antigravity | TODO | — |
-| T22 | MixDock / Mix page / share | Antigravity | TODO | — |
+| T20 | Hotspot picker / lazy AI | Antigravity | DONE | HotspotGridPicker with 32/48 checkerboard, red crosshair, pointFromPointer exact corner clamping, scaleHotspot, keyboard arrow/shift and numeric inputs; backgroundRemoval lazy import, isWasmSupported check, AGPL-3.0 license gate, 18/18 unit tests PASS. |
+| T21 | Studio Canvas / Export | Antigravity | DONE | StudioCanvas with sticker outline 0..4px, contain-fit 32/48, StudioPage upload dropzone 2MB, optional lazy AI background removal, HotspotGridPicker integration, live hover tester, interactive sandbox modal, POST /api/v1/studio/convert binary CUR download, 25/25 tests PASS. |
+| T22 | MixDock / Mix page / share | Antigravity | DONE | MixMatchDock with 8 slots, mobile sheet 64px, localStorage ccs.mix.v1 schema validation, MixPage composer, catalog quick-picker, POST /api/v1/studio/share, GET /api/v1/studio/share/:code read-only & 'Use this mix', 30/30 tests PASS. |
 | T23 | Prod Compose / Caddy | Codex | TODO | — |
 | T24 | Backup / restore | Codex | TODO | — |
 | T25 | CI / Browser E2E / release | Antigravity + Codex review | TODO | — |
 
 ### 3.1 Active Task Card — copy and update each session
+
+```yaml
+task_id: T22
+task_name: MixMatchDock and local/shared Mix Page
+agent: Antigravity
+status: DONE
+completed_at: "2026-11-18"
+primary_files:
+  - frontend/src/components/MixMatchDock.tsx
+  - frontend/src/features/mix/mixStorage.ts
+  - frontend/src/features/mix/MixPage.tsx
+  - frontend/src/tests/mix.test.ts
+  - frontend/src/App.tsx
+dependencies: [T14, T17, T19]
+commands_run:
+  - node --test --experimental-strip-types src/tests/api.test.ts src/tests/hotspot.test.ts src/tests/studio.test.ts src/tests/mix.test.ts (30/30 PASS)
+  - npm run typecheck (tsc --noEmit with strict)
+  - npm run build (tsc && vite build)
+  - Live Browser Subagent E2E Verification (MixPage, MixMatchDock 8 roles rack, catalog quick-picker modal, 'Neon Circuit' assignment, POST /api/v1/studio/share code generation with 90-day expiry, read-only preview /mix/:code, 'Use this mix' explicit import per F06, 0 console errors)
+result_summary: Hiện thực trọn vẹn Phase 3 Frontend với Task T22 (MixMatchDock và MixPage). Thanh dock nổi MixMatchDock cố định phía dưới màn hình (desktop 8 slot với icon vai trò và ảnh thumbnail 32px; mobile thanh cuộn 64px hỗ trợ safe-area-inset-bottom). Trạng thái Mix draft được quản lý qua useLocalMix và lưu vào localStorage theo key ccs.mix.v1 đúng F06 (có kiểm tra schema, version: 1, 8 role độc lập, không lưu binary/Blob, tự động phục hồi an toàn khi gặp dữ liệu lỗi). Trang MixPage hỗ trợ soạn thảo preset 8 vai trò, gán role từ Catalog Quick-Picker modal, liên kết thời gian thực với InteractiveSandbox. Chức năng chia sẻ gọi POST /api/v1/studio/share chỉ gửi cấu hình pack_id + role_type theo F06, tạo mã share 90 ngày. Trang /mix/:code hiển thị chế độ read-only, xử lý 404/410, cung cấp nút 'Use this mix' chỉ ghi đè khi người dùng bấm rõ ràng. Toàn bộ 30 test unit/integration và kiểm thử trình duyệt đạt 100% PASS, 0 console error. Phase 3 (T16-T22) CHÍNH THỨC HOÀN THÀNH.
+open_blocker: null
+next_task: T23
+```
+
+#### Previous Task Card — T21
+
+```yaml
+task_id: T21
+task_name: Studio Canvas pipeline + Export Page
+agent: Antigravity
+status: DONE
+completed_at: "2026-11-18"
+primary_files:
+  - frontend/src/features/studio/canvasPipeline.ts
+  - frontend/src/features/studio/StudioCanvas.tsx
+  - frontend/src/features/studio/StudioPage.tsx
+  - frontend/src/tests/studio.test.ts
+  - frontend/src/App.tsx
+dependencies: [T11, T17, T20]
+commands_run:
+  - node --test --experimental-strip-types src/tests/api.test.ts src/tests/hotspot.test.ts src/tests/studio.test.ts (25/25 PASS)
+  - npm run typecheck (tsc --noEmit with strict)
+  - npm run build (tsc && vite build)
+  - Live Browser Subagent E2E Verification (StudioPage, Dropzone 2MB, Source Image meta, StudioCanvas, Sticker outline, HotspotGridPicker preset center (16,16), Interactive Sandbox preview modal, POST /api/v1/studio/convert binary download custom-cursor.cur, 0 console errors)
+result_summary: Hiện thực hoàn chỉnh quy trình xử lý ảnh Photo Studio tại StudioPage và StudioCanvas theo đúng RULES.md (F04, F05, F07) và DESIGN.md (mục 4.3, 4.4, 4.6). Dropzone kiểm tra giới hạn 2MiB và định dạng PNG/JPEG/WebP trước khi nạp; thông báo bảo mật rõ ràng về xử lý client-side. Tích hợp thuật toán sticker outline nở alpha dilation với bán kính r trong [0, 4]px ôm sát silhouette chủ thể, bảng màu preset và custom color. Contain-fit tự động căn chỉnh ảnh vào khung 32x32 và 48x48. Tích hợp HotspotGridPicker từ T20 đồng bộ hai chiều với bộ điều khiển. Nút 'Remove Background (AI)' sử dụng module nạp lười từ T20 kèm thanh tiến trình và tuỳ chọn 'Skip AI' / revert ảnh gốc mượt mà. Nút 'Export Windows .cur' gửi multipart FormData lên endpoint backend thật /api/v1/studio/convert, tải file .cur nhị phân về máy (kiểm chứng magic header 00 00 02 00), hiển thị toast thông báo thành công và xử lý các lỗi 413, 415, 422, 429 không gây double-submit. Nút 'Preview in Sandbox' mở modal InteractiveSandbox 8 zone để thử nghiệm con trỏ vừa tạo trước khi tải. Toàn bộ 25 test unit/integration và kiểm thử trình duyệt đạt 100% PASS, 0 console errors.
+open_blocker: null
+next_task: T22
+```
+
+#### Previous Task Card — T20
+
+```yaml
+task_id: T20
+task_name: Hotspot picker and lazy AI module
+agent: Antigravity
+status: DONE
+completed_at: "2026-11-18"
+primary_files:
+  - frontend/src/components/HotspotGridPicker.tsx
+  - frontend/src/features/studio/hotspot.ts
+  - frontend/src/features/studio/backgroundRemoval.ts
+  - frontend/src/tests/hotspot.test.ts
+dependencies: [T16]
+commands_run:
+  - node --test --experimental-strip-types src/tests/api.test.ts src/tests/hotspot.test.ts (18/18 PASS)
+  - npm run typecheck (tsc --noEmit with strict)
+  - npm run build (tsc && vite build)
+result_summary: Hiện thực hoàn chỉnh HotspotGridPicker với lưới checkerboard phóng to tỉ lệ 32x32 và 48x48 pixel, crosshair đỏ chính xác (#EF4444) với shadow tương phản cao, pointFromPointer tính toán tọa độ click clamped [0, size-1] chính xác tại các góc (0,0), (31,31), (47,47). Hỗ trợ đầy đủ phím mũi tên bàn phím (bước 1px, Shift bước 5px, Home/End) và 2 input number bắt buộc theo F05. Tích hợp scaleHotspot chuyển đổi tỉ lệ chính xác khi đổi kích thước giữa 32 và 48. Hiện thực module backgroundRemoval.ts sử dụng dynamic lazy import thư viện @imgly/background-removal (chỉ tải khi thực hiện tách nền, hoàn toàn không tải khi xem trang chủ/Gallery), kiểm tra WebAssembly với isWasmSupported, mapping tiến trình progress callback, fallback lỗi rõ ràng khi môi trường không hỗ trợ, ghi nhận license gate AGPL-3.0 (AGPL_LICENSE_NOTICE). Toàn bộ 18 test unit (11 API + 7 Hotspot/AI) và build bundle phân tách chunk thành công 100%.
+open_blocker: null
+next_task: T21
+```
+
+#### Previous Task Card — T19
 
 ```yaml
 task_id: T19
@@ -863,23 +936,24 @@ Status:
 
 ## 9. Session Handoff — copy for next Agent
 
-**Trạng thái:** Backend API T01–T15 (Phase 1–2) và Frontend T16, T17, T18, T19 (Phase 3) đã PASS. T20 (Hotspot picker / lazy AI) là task tiếp theo dành cho Antigravity.
+**Trạng thái:** Backend API T01–T15 (Phase 1–2) và Toàn bộ Frontend T16–T22 (Phase 3) đã PASS 100%. Phase 4 — Production / QA bắt đầu với Task T23 dành cho Codex.
 
-### 9.1 Next Session Prompt — Antigravity (T20)
+### 9.1 Next Session Prompt — Codex (T23)
 
 ```text
-Bạn đang là Antigravity, Frontend Agent của dự án Custom Cursor Studio & Library.
+Bạn đang là Codex, Backend / DevOps Agent của dự án Custom Cursor Studio & Library.
 
 Trước khi code, đọc đủ 6 tài liệu tại root:
 PRD.md, ARCHITECTURE.md, DESIGN.md, RULES.md, TASKS.md, PROGRESS.md.
 
-Task hiện tại: T20 — Hotspot picker and lazy AI module.
-Primary files: frontend/src/components/HotspotGridPicker.tsx, frontend/src/features/studio/backgroundRemoval.ts.
+Task hiện tại: T23 — Production compose and Caddy HTTPS setup.
+Primary files: docker-compose.prod.yml, deploy/Caddyfile.
 Yêu cầu:
-- HotspotGridPicker: lưới phóng to 32/48 checkerboard, crosshair đỏ, pixel math click chính xác (clamp [0, size-1]), hỗ trợ bàn phím mũi tên và nhập số.
-- backgroundRemoval.ts: dynamic lazy import thư viện tách nền (@imgly/background-removal), không load khi vào homepage/gallery, hỗ trợ skip/fallback khi không có WebAssembly/model lỗi.
-- Đảm bảo strict typecheck và test unit toán tọa độ.
-- Sau khi T20 hoàn thành, DỪNG lại để báo cáo. Không tự động chuyển sang T21.
+- Thiết lập production Docker Compose với backend, MySQL 8.0, Caddy reverse proxy HTTPS tự động.
+- Cấu hình SPA routing cho Frontend tĩnh đã build (dist/), proxy /api và /static tới FastAPI backend.
+- Cấu hình bảo mật: HSTS, X-Content-Type-Options: nosniff, CORS, Content Security Policy, rate limit.
+- Chạy thử nghiệm compose và xác nhận health checks.
+- Sau khi T23 hoàn thành, DỪNG lại để báo cáo. Không tự động chuyển sang T24.
 ```
 
 ### 9.3 End-of-session handoff update template

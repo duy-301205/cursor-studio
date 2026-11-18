@@ -295,10 +295,10 @@ The linear ordering above is the recommended solo workflow, not an excuse to wai
 - **Primary files:** `frontend/src/components/HotspotGridPicker.tsx`, `frontend/src/features/studio/backgroundRemoval.ts`.
 - **Technical work:** 32/48 zoomed checkerboard grid + red crosshair, click-to-pixel math, keyboard/numeric inputs, bounds/size scaling; lazy import đúng package `@imgly/background-removal`; fallback error/Skip AI and model progress callbacks. License approval must be tracked before release.
 - **Acceptance criteria:**
-  - [ ] Corner clicks `(0,0)`, `(31,31)`, `(47,47)` exact; keyboard arrows and numeric input work.
-  - [ ] Changing size keeps valid hotspot proportional to final image.
-  - [ ] AI module is not downloaded on Gallery load; safe fallback when unavailable.
-  - [ ] No localStorage photo/Blob persistence; license gate present in release checklist.
+  - [x] Corner clicks `(0,0)`, `(31,31)`, `(47,47)` exact; keyboard arrows and numeric input work.
+  - [x] Changing size keeps valid hotspot proportional to final image.
+  - [x] AI module is not downloaded on Gallery load; safe fallback when unavailable.
+  - [x] No localStorage photo/Blob persistence; license gate present in release checklist.
 - **Evidence:** unit/manual coordinate test results; network waterfall on Gallery shows no WASM.
 
 ### T21 — Studio Canvas pipeline + Export Page
@@ -307,10 +307,10 @@ The linear ordering above is the recommended solo workflow, not an excuse to wai
 - **Primary files:** `frontend/src/features/studio/StudioCanvas.tsx`, `frontend/src/features/studio/StudioPage.tsx`.
 - **Technical work:** upload dropzone 2MiB validation, preview alpha checkerboard, optional client-side cutout using T20 helper, alpha-mask sticker outline, contain resize 32/48, hotspot picker from T20, POST PNG output + x/y/size to convert; Blob download; loading/error/retry/accessibility.
 - **Acceptance criteria:**
-  - [ ] Can export 32 and 48 transparent images into CUR from real backend (prefix header tested via browser blob).
-  - [ ] AI remove background can be skipped/failed without disabling Export.
-  - [ ] Outline follows subject alpha not bounding-box; image keeps proportions.
-  - [ ] 413/415/422/429 show actionable error, no double submit, object URLs revoked.
+  - [x] Can export 32 and 48 transparent images into CUR from real backend (prefix header tested via browser blob).
+  - [x] AI remove background can be skipped/failed without disabling Export.
+  - [x] Outline follows subject alpha not bounding-box; image keeps proportions.
+  - [x] 413/415/422/429 show actionable error, no double submit, object URLs revoked.
 - **Evidence:** 2 sample CUR downloaded + screenshot hotspot grid and Network payload.
 
 ### T22 — MixMatchDock and local/shared Mix Page
@@ -319,11 +319,11 @@ The linear ordering above is the recommended solo workflow, not an excuse to wai
 - **Primary files:** `frontend/src/components/MixMatchDock.tsx`, `frontend/src/features/mix/MixPage.tsx`.
 - **Technical work:** 8 role dock, localStorage `ccs.mix.v1`, validation/migration fallback, add/replace/remove/clear, expanded mobile sheet, live sandbox integration via app state, share POST, read-only GET for `/mix/:code`, explicit Use this mix, 404/410.
 - **Acceptance criteria:**
-  - [ ] Mix persists reload, 8 roles independent, remove/reassign doesn't corrupt others.
-  - [ ] Share creates URL, another browser can open and preview same public source roles.
-  - [ ] Visiting link does not silently overwrite local mix; click Use this mix does.
-  - [ ] Mobile dock doesn't cover key controls; corrupt localStorage handled gracefully.
-  - [ ] No photo/Base64 or external URL in share config; only refs.
+  - [x] Mix persists reload, 8 roles independent, remove/reassign doesn't corrupt others.
+  - [x] Share creates URL, another browser can open and preview same public source roles.
+  - [x] Visiting link does not silently overwrite local mix; click Use this mix does.
+  - [x] Mobile dock doesn't cover key controls; corrupt localStorage handled gracefully.
+  - [x] No photo/Base64 or external URL in share config; only refs.
 - **Evidence:** cross-browser share flow, localStorage schema screenshot (no sensitive user data).
 
 ---

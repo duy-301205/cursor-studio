@@ -11,12 +11,15 @@ import {
   Compass,
   ArrowRight,
   ShieldCheck,
-  Zap,
   Terminal,
 } from 'lucide-react';
 
 import { GalleryPage } from './features/gallery/GalleryPage';
 import { PackDetailPage } from './features/gallery/PackDetailPage';
+import { StudioPage } from './features/studio/StudioPage';
+import { MixPage } from './features/mix/MixPage';
+import { MixMatchDock } from './components/MixMatchDock';
+import { useLocalMix } from './features/mix/mixStorage';
 
 type Theme = 'light' | 'dark';
 
@@ -37,6 +40,9 @@ export default function App(): React.ReactElement {
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const location = useLocation();
+
+  // Local mix state for global dock
+  const { mix, removeRole, clearAll } = useLocalMix();
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -232,11 +238,19 @@ export default function App(): React.ReactElement {
           <Route path="/packs" element={<GalleryPage />} />
           <Route path="/packs/:slug" element={<PackDetailPage />} />
           <Route path="/pack/:slug" element={<PackDetailPage />} />
-          <Route path="/studio" element={<StudioPlaceholder />} />
-          <Route path="/mix" element={<MixPlaceholder />} />
+          <Route path="/studio" element={<StudioPage />} />
+          <Route path="/mix" element={<MixPage />} />
+          <Route path="/mix/:code" element={<MixPage />} />
           <Route path="*" element={<NotFoundPlaceholder />} />
         </Routes>
       </main>
+
+      {/* Persistent Mix & Match Dock across all views */}
+      <MixMatchDock
+        mix={mix}
+        onRemove={removeRole}
+        onClear={clearAll}
+      />
 
       {/* ============================================================ */}
       {/* 3. Footer                                                    */}
@@ -316,74 +330,6 @@ export default function App(): React.ReactElement {
   );
 }
 
-
-/**
- * Studio Structural Placeholder (Target for T20–T21)
- */
-function StudioPlaceholder(): React.ReactElement {
-  return (
-    <section className="space-y-8 animate-fadeIn">
-      <div className="rounded-2xl bg-surface border border-line p-6 sm:p-8 shadow-card space-y-3">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-soft text-brand text-xs font-semibold">
-          <Sparkles className="w-3.5 h-3.5" />
-          Photo Studio
-        </div>
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-ink">
-          Convert Custom Artwork to Windows CUR
-        </h2>
-        <p className="text-muted text-sm sm:text-base max-w-2xl">
-          Upload transparent artwork (PNG/WebP &le; 2MB), adjust sticker outline, place pixel-precise hotspots on a 32/48 grid, and export standard Windows binary cursors.
-        </p>
-      </div>
-
-      <div className="p-8 rounded-2xl border-2 border-dashed border-line bg-raised/50 flex flex-col items-center justify-center text-center py-16 space-y-4">
-        <div className="w-16 h-16 rounded-2xl bg-surface border border-line flex items-center justify-center text-brand shadow-sm">
-          <Zap className="w-8 h-8" />
-        </div>
-        <div className="space-y-1">
-          <h3 className="text-lg font-bold text-ink">Photo Studio Pipeline Container</h3>
-          <p className="text-xs text-muted max-w-md">
-            Targeted for Task T20 (Hotspot Picker &amp; WASM Background Removal) and Task T21 (Canvas Pipeline &amp; Export API).
-          </p>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/**
- * Mix & Match Structural Placeholder (Target for T22)
- */
-function MixPlaceholder(): React.ReactElement {
-  return (
-    <section className="space-y-8 animate-fadeIn">
-      <div className="rounded-2xl bg-surface border border-line p-6 sm:p-8 shadow-card space-y-3">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-soft text-brand text-xs font-semibold">
-          <Layers className="w-3.5 h-3.5" />
-          Mix &amp; Match
-        </div>
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-ink">
-          Personalized 8-Role Preset Composer
-        </h2>
-        <p className="text-muted text-sm sm:text-base max-w-2xl">
-          Combine your favorite cursors across multiple published packs, test interactions in the sandbox, save locally, and generate shareable codes.
-        </p>
-      </div>
-
-      <div className="p-8 rounded-2xl border-2 border-dashed border-line bg-raised/50 flex flex-col items-center justify-center text-center py-16 space-y-4">
-        <div className="w-16 h-16 rounded-2xl bg-surface border border-line flex items-center justify-center text-brand shadow-sm">
-          <Layers className="w-8 h-8" />
-        </div>
-        <div className="space-y-1">
-          <h3 className="text-lg font-bold text-ink">8-Role MixDock &amp; Share Container</h3>
-          <p className="text-xs text-muted max-w-md">
-            Targeted for Task T22 (MixMatchDock, localStorage sync, and preset sharing).
-          </p>
-        </div>
-      </div>
-    </section>
-  );
-}
 
 /**
  * 404 Route Placeholder

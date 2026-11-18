@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from starlette.staticfiles import StaticFiles
 from starlette.types import Receive, Scope, Send
 
+from app.api.v1.admin_auth import router as admin_auth_router
 from app.api.v1.catalog import router as catalog_router
 from app.api.v1.studio import router as studio_router
 from app.core.config import Settings
@@ -77,6 +78,7 @@ app = FastAPI(
     docs_url=None,
     redoc_url=None,
 )
+app.include_router(admin_auth_router)
 app.include_router(catalog_router)
 app.include_router(studio_router)
 

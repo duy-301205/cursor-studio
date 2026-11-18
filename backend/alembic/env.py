@@ -11,7 +11,7 @@ from app.core.config import Settings
 from app.db.session import Base, create_engine
 
 # Register every relationship target for metadata-based migrations.
-from app.models import category, cursor_item, cursor_pack, custom_creation  # noqa: F401
+from app.models import admin_user, category, cursor_item, cursor_pack, custom_creation  # noqa: F401
 
 
 def run_migrations_offline() -> None:

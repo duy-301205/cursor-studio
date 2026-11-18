@@ -18,7 +18,7 @@ Theo ADMIN_EXTENSION §9 và [ADMIN_SPEC.md](ADMIN_SPEC.md). Codex sở hữu ba
 - **Nghiệm thu / kiểm thử** — Rà ADMIN_EXTENSION §4–§12, kiểm tra repo thật, đối chiếu API/schema/path, parse JSON mẫu, kiểm đồ thị và diff chỉ gồm hai tài liệu mới.
 - **PASS/FAIL** — PASS tài liệu khi hai file đủ, consistency checks đạt, không có thay đổi triển khai. Chấp thuận kiến trúc là cổng riêng trước A02. Runtime không thuộc A01.
 
-### [ ] A02 — Admin ORM + Alembic Migration
+### [x] A02 — Admin ORM + Alembic Migration
 
 - **Agent / phụ thuộc** — Codex. A01 và phê duyệt của chủ dự án.
 - **File chính** — backend/app/models/admin_user.py, backend/alembic/versions/0002_admin.py (Xác nhận head trước khi đặt revision). Alembic env/model registration và migration tests là supporting files nếu cần.
@@ -26,7 +26,7 @@ Theo ADMIN_EXTENSION §9 và [ADMIN_SPEC.md](ADMIN_SPEC.md). Codex sở hữu ba
 - **Nghiệm thu / kiểm thử** — Trên MySQL test có dữ liệu legacy, chạy alembic upgrade head, downgrade 0001_initial và upgrade head. So schema ORM/SHOW CREATE TABLE, test FK chéo pack, unique, rollback với dữ liệu Admin và so snapshot bốn bảng legacy.
 - **PASS/FAIL** — PASS nếu chu trình, guard và bảo toàn legacy đạt. FAIL nếu migration làm mất dữ liệu, tạo admin mặc định hoặc có FK/index lệch.
 
-### [ ] A03 — Session Authentication
+### [x] A03 — Session Authentication
 
 - **Agent / phụ thuộc** — Codex. A02.
 - **File chính** — backend/app/core/admin_auth.py, backend/app/api/v1/admin_auth.py. Mount tại backend/app/main.py, settings, deps/lock Argon2id và test cần duyệt supporting scope.

@@ -71,8 +71,13 @@ export const MixMatchDock: React.FC<MixMatchDockProps> = ({
   const assignedCount = countAssignedRoles(mix.roles);
   const isMixPage = location.pathname.startsWith('/mix');
 
-  // Hide the dock on mobile if user is already on /mix to avoid duplicate controls
-  // or allow collapsing
+  // Option 1 UX Optimization:
+  // Hide the dock completely when empty (assignedCount === 0) to avoid obstructing gallery cards and controls.
+  // Also hide on /mix page since /mix already contains the full interactive 8-slot composer.
+  if (assignedCount === 0 || isMixPage) {
+    return null;
+  }
+
   const handleSlotClick = (role: CursorRole) => {
     navigate(`/mix#slot-${role}`);
   };
@@ -91,7 +96,7 @@ export const MixMatchDock: React.FC<MixMatchDockProps> = ({
   return (
     <aside
       aria-label="Mix and Match Cursor Dock"
-      className={`fixed bottom-3 sm:bottom-5 left-1/2 -translate-x-1/2 z-30 w-[calc(100vw-24px)] max-w-[1100px] transition-all duration-200 ${className}`}
+      className={`fixed bottom-3 sm:bottom-5 left-1/2 -translate-x-1/2 z-30 w-[calc(100vw-24px)] max-w-[1100px] transition-all duration-200 animate-fadeIn ${className}`}
     >
       <div className="rounded-2xl border border-line bg-surface/95 backdrop-blur-md shadow-2xl p-3 sm:p-4 text-ink">
         {/* Mobile Header / Collapsed Strip */}

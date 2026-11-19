@@ -33,7 +33,7 @@ from app.db.seed import SAMPLES_DIRECTORY, seed_development
 from app.db.session import DatabaseState, database_lifespan, get_db
 from app.models.admin_user import AssetKind
 from app.schemas.admin_pack import MAX_SAFE_ID
-from app.services.admin_assets import asset_key, private_storage
+from app.services.admin_assets import ANI_MIME_TYPE, asset_key, private_storage
 from app.services.pack_publisher import (
     managed_prefix,
     published_asset,
@@ -142,6 +142,7 @@ _MEDIA_TYPES = {
     "png": (AssetKind.PREVIEW, "image/png"),
     "webp": (AssetKind.THUMBNAIL, "image/webp"),
     "cur": (AssetKind.CURSOR, "application/octet-stream"),
+    "ani": (AssetKind.CURSOR, ANI_MIME_TYPE),
 }
 
 
@@ -187,7 +188,7 @@ async def managed_media(
             raise ValueError("Noncanonical UUID")
     except ValueError:
         return Response(status_code=404, headers=headers)
-    key = asset_key(int(pack_id), asset_id, kind)
+    key = asset_key(int(pack_id), asset_id, kind, mime_type=mime)
     try:
         settings = Settings.model_validate({})
         async with db.begin():
@@ -202,6 +203,8 @@ async def managed_media(
     except (StorageError, SQLAlchemyError, RuntimeError):
         return Response(status_code=503, headers=headers)
     headers["Content-Length"] = str(len(content))
+    if extension == "ani":
+        headers["Content-Disposition"] = 'attachment; filename="cursor.ani"'
     headers["Vary"] = "Origin"
     origin = request.headers.get("origin")
     if origin is not None and origin in settings.cors_origins:

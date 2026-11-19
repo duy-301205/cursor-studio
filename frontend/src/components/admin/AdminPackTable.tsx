@@ -164,6 +164,11 @@ export function AdminPackTable({
                         )}
                       </div>
                       <span className="font-mono text-xs text-muted/80">{pack.slug}</span>
+                      {isDraft && pack.is_animated && (
+                        <span className="mt-1 w-fit rounded bg-brand-soft px-2 py-0.5 text-xs font-semibold text-brand">
+                          Có con trỏ động
+                        </span>
+                      )}
                     </div>
                   </td>
 
@@ -284,6 +289,11 @@ export function AdminPackTable({
                     <span className="font-bold text-ink text-base">{pack.title}</span>
                   </div>
                   <div className="text-xs font-mono text-muted">{pack.slug}</div>
+                  {isDraft && pack.is_animated && (
+                    <span className="mt-1 inline-block rounded bg-brand-soft px-2 py-0.5 text-xs font-semibold text-brand">
+                      Có con trỏ động
+                    </span>
+                  )}
                 </div>
 
                 {isDraft ? (

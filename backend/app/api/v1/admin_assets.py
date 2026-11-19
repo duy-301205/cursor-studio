@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 from datetime import timedelta
 from hashlib import sha256
 from math import ceil
+from os import environ
 from uuid import UUID, uuid4
 
 from anyio import CancelScope, CapacityLimiter, WouldBlock
@@ -36,6 +37,7 @@ from app.models.admin_user import AdminAsset, AdminPackState, AdminRateLimit, As
 from app.models.cursor_pack import CursorPack, PackStatus
 from app.schemas.admin_pack import PackAsset
 from app.services.admin_assets import (
+    ANI_MIME_TYPE,
     MAX_UPLOAD_BYTES,
     AssetKeyExists,
     InvalidAsset,
@@ -228,12 +230,14 @@ async def _save(
     async with db.begin():
         await _check_pack(db, request, pack_id, lock=False)
     try:
-        asset = await validate_asset(kind, data)
+        asset = await validate_asset(
+            kind, data, allow_ani=environ.get("ADMIN_ANI_UPLOAD_ENABLED") == "true"
+        )
     except InvalidAsset as exc:
         raise AuthProblem(415, "UNSUPPORTED_MEDIA_TYPE", str(exc)) from None
 
     asset_id = uuid4()
-    key = asset_key(pack_id, asset_id, kind)
+    key = asset_key(pack_id, asset_id, kind, mime_type=asset.mime_type)
     store = private_storage(Settings.model_validate({}))
     attempted = False
     try:
@@ -292,7 +296,7 @@ async def upload_asset(
 
 
 @router.get("/packs/{id}/assets/{asset_id}/content")
-async def read_image(
+async def read_asset(
     id: str, asset_id: str, identity: AdminDependency, db: AdminDatabase
 ) -> Response:
     pack_id = _pack_id(id)
@@ -309,12 +313,17 @@ async def read_image(
                 AdminAsset.id == parsed.bytes, AdminAsset.pack_id == pack_id
             )
         )
-    if row is None or row.kind == AssetKind.CURSOR:
+    if row is None:
         raise AuthProblem(404, "NOT_FOUND", "Asset not found.")
-    media = "image/png" if row.kind == AssetKind.PREVIEW else "image/webp"
+    if row.kind == AssetKind.CURSOR:
+        if row.mime_type != ANI_MIME_TYPE:
+            raise AuthProblem(404, "NOT_FOUND", "Asset not found.")
+        media = ANI_MIME_TYPE
+    else:
+        media = "image/png" if row.kind == AssetKind.PREVIEW else "image/webp"
     try:
         if row.mime_type != media or row.storage_key != asset_key(
-            pack_id, parsed, row.kind
+            pack_id, parsed, row.kind, mime_type=media
         ):
             raise StorageError("Registry asset metadata mismatch")
         store = private_storage(Settings.model_validate({}))
@@ -327,4 +336,9 @@ async def read_image(
         raise AuthProblem(
             503, "STORAGE_UNAVAILABLE", "Private asset storage is unavailable."
         ) from None
-    return Response(content=data, media_type=media)
+    headers = (
+        {"Content-Disposition": 'attachment; filename="cursor.ani"'}
+        if media == ANI_MIME_TYPE
+        else None
+    )
+    return Response(content=data, media_type=media, headers=headers)

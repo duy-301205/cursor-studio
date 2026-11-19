@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.admin_user import AdminAsset, AssetKind
 from app.services.admin_assets import (
+    ANI_MIME_TYPE,
     MAX_UPLOAD_BYTES,
     AssetBytes,
     InvalidAsset,
@@ -19,6 +20,7 @@ from app.services.admin_assets import (
     asset_key,
     validate_asset,
 )
+from app.services.ani_validator import validate_ani_cursor
 
 _MIME_TYPES = {
     AssetKind.PREVIEW: "image/png",
@@ -36,21 +38,26 @@ async def find_asset(
 
 
 async def verify_registered_asset(
-    store: PrivateAssets, asset: AdminAsset, kind: AssetKind
+    store: PrivateAssets, asset: AdminAsset, kind: AssetKind, *, allow_ani: bool = False
 ) -> AssetBytes:
     """Check ownership-derived key, stored bytes and verified format metadata."""
     if asset.kind != kind:
         raise InvalidAsset(f"Expected a {kind.value} asset.")
+    is_ani = kind == AssetKind.CURSOR and asset.mime_type == ANI_MIME_TYPE
+    if is_ani and not allow_ani:
+        raise InvalidAsset("Animated cursor bindings are disabled for this operation.")
+    expected_mime = ANI_MIME_TYPE if is_ani else _MIME_TYPES[kind]
     if (
-        asset.storage_key != asset_key(asset.pack_id, UUID(bytes=asset.id), kind)
-        or asset.mime_type != _MIME_TYPES[kind]
+        asset.storage_key
+        != asset_key(asset.pack_id, UUID(bytes=asset.id), kind, mime_type=expected_mime)
+        or asset.mime_type != expected_mime
         or not 0 < asset.byte_size <= MAX_UPLOAD_BYTES
     ):
         raise InvalidAsset("Asset registry metadata does not match its kind.")
     data = await store.read(asset.storage_key, max_bytes=asset.byte_size)
     if len(data) != asset.byte_size or sha256(data).digest() != asset.sha256:
         raise InvalidAsset("Asset integrity verification failed.")
-    verified = await validate_asset(kind, data)
+    verified = await validate_asset(kind, data, allow_ani=is_ani)
     if (
         verified.mime_type != asset.mime_type
         or verified.width != asset.width
@@ -85,12 +92,19 @@ def _visible_rgba(image: Image.Image) -> bytes:
 def _match_rasters(cursor: AssetBytes, preview: AssetBytes) -> None:
     size = (cursor.width, cursor.height)
     end = 62 + cursor.width * cursor.height * 4
-    # validate_asset has already verified the single-entry DIB, including its AND mask.
-    cursor_image = Image.frombytes(
-        "RGBA", size, cursor.data[62:end], "raw", "BGRA", 0, -1
+    frame = (
+        validate_ani_cursor(cursor.data).first_frame
+        if cursor.mime_type == ANI_MIME_TYPE
+        else cursor.data
     )
+    # Both formats have passed single-entry DIB checks for the selected frame.
+    cursor_image = Image.frombytes("RGBA", size, frame[62:end], "raw", "BGRA", 0, -1)
     with Image.open(BytesIO(preview.data), formats=["PNG"]) as image:
         if _visible_rgba(image.convert("RGBA")) != _visible_rgba(cursor_image):
+            if cursor.mime_type == ANI_MIME_TYPE:
+                raise InvalidAsset(
+                    "Preview pixels do not match the first played ANI frame."
+                )
             raise InvalidAsset("Preview pixels do not match the cursor raster.")
 
 
@@ -100,15 +114,19 @@ async def validate_role_assets(
     preview: AdminAsset,
     hotspot_x: int,
     hotspot_y: int,
+    *,
+    allow_ani: bool = False,
 ) -> AssetBytes:
-    """Check role dimensions, CUR hotspot and visible preview pixels including alpha."""
+    """Check role dimensions, cursor hotspot and visible preview pixels including alpha."""
     if (
         cursor.pack_id != preview.pack_id
         or cursor.kind != AssetKind.CURSOR
         or preview.kind != AssetKind.PREVIEW
     ):
         raise InvalidAsset("Expected a cursor and a preview from the same pack.")
-    cursor_bytes = await verify_registered_asset(store, cursor, AssetKind.CURSOR)
+    cursor_bytes = await verify_registered_asset(
+        store, cursor, AssetKind.CURSOR, allow_ani=allow_ani
+    )
     preview_bytes = await verify_registered_asset(store, preview, AssetKind.PREVIEW)
     if (cursor_bytes.width, cursor_bytes.height) != (
         preview_bytes.width,
@@ -120,6 +138,8 @@ async def validate_role_assets(
         or not 0 <= hotspot_y < cursor_bytes.height
         or (hotspot_x, hotspot_y) != (cursor_bytes.hotspot_x, cursor_bytes.hotspot_y)
     ):
+        if cursor_bytes.mime_type == ANI_MIME_TYPE:
+            raise InvalidAsset("Hotspot must match the ANI frames and fit the raster.")
         raise InvalidAsset("Hotspot must match the CUR header and fit the raster.")
     await to_thread.run_sync(_match_rasters, cursor_bytes, preview_bytes)
     return cursor_bytes

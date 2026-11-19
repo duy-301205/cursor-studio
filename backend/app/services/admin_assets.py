@@ -33,11 +33,12 @@ from app.services.storage import (
 )
 
 MAX_UPLOAD_BYTES = 2 * 1024 * 1024
+ANI_MIME_TYPE = "application/x-navi-animation"
 _MAX_PIXELS = 12_000_000
 _PROCESSING = CapacityLimiter(2)
 _STORAGE = CapacityLimiter(4)
 _ASSET_KEY = re.compile(
-    r"managed/[1-9][0-9]{0,15}/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\.(?:png|webp|cur)"
+    r"managed/[1-9][0-9]{0,15}/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\.(?:png|webp|cur|ani)"
 )
 _STATIC_ROOT = Path(__file__).resolve().parents[1] / "static"
 _PNG_HEADER = b"\x89PNG\r\n\x1a\n"
@@ -62,12 +63,16 @@ class AssetBytes:
     hotspot_y: int | None = None
 
 
-def asset_key(pack_id: int, asset_id: UUID, kind: AssetKind) -> str:
+def asset_key(
+    pack_id: int, asset_id: UUID, kind: AssetKind, *, mime_type: str | None = None
+) -> str:
     extension = {
         AssetKind.PREVIEW: "png",
         AssetKind.THUMBNAIL: "webp",
         AssetKind.CURSOR: "cur",
     }[kind]
+    if kind == AssetKind.CURSOR and mime_type == ANI_MIME_TYPE:
+        extension = "ani"
     return _validated_key(f"managed/{pack_id}/{asset_id}.{extension}")
 
 
@@ -163,11 +168,32 @@ def _validate_cursor(data: bytes) -> AssetBytes:
     return AssetBytes(data, "application/octet-stream", width, height, x, y)
 
 
-async def validate_asset(kind: AssetKind, data: bytes) -> AssetBytes:
+def _validate_animated_cursor(data: bytes) -> AssetBytes:
+    # The ANI parser uses this module's existing CUR frame validation.
+    from app.services.ani_validator import validate_ani_cursor
+
+    cursor = validate_ani_cursor(data)
+    return AssetBytes(
+        data,
+        ANI_MIME_TYPE,
+        cursor.width,
+        cursor.height,
+        cursor.hotspot_x,
+        cursor.hotspot_y,
+    )
+
+
+async def validate_asset(
+    kind: AssetKind, data: bytes, *, allow_ani: bool = False
+) -> AssetBytes:
     """Decode or validate an entire bounded asset off the event loop."""
     if not 0 < len(data) <= MAX_UPLOAD_BYTES:
         raise InvalidAsset("Invalid asset byte count.")
     if kind == AssetKind.CURSOR:
+        if allow_ani and data.startswith(b"RIFF"):
+            return await to_thread.run_sync(
+                _validate_animated_cursor, data, limiter=_PROCESSING
+            )
         return await to_thread.run_sync(_validate_cursor, data, limiter=_PROCESSING)
     normalized = await to_thread.run_sync(
         _normalize_image, kind, data, limiter=_PROCESSING

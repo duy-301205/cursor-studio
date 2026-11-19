@@ -34,6 +34,9 @@ import {
 } from '../../lib/adminApi.ts';
 import { HotspotGridPicker, type HotspotPoint } from '../HotspotGridPicker.tsx';
 
+const ANI_MIME_TYPE = 'application/x-navi-animation';
+const aniEnabled = import.meta.env.VITE_ADMIN_ANI_ENABLED === 'true';
+
 export interface RoleAssetEditorProps {
   packId: number;
   roles: AdminPackRole[];
@@ -117,6 +120,9 @@ export const RoleAssetEditor: React.FC<RoleAssetEditorProps> = ({
 
   const [selectedCurFile, setSelectedCurFile] = useState<File | null>(null);
   const [selectedCurAssetId, setSelectedCurAssetId] = useState<string | null>(null);
+  const [animated, setAnimated] = useState(false);
+  const [aniAsset, setAniAsset] = useState<AdminPackAsset | null>(null);
+  const [previewSize, setPreviewSize] = useState<number | null>(null);
 
   const [hotspot, setHotspot] = useState<HotspotPoint>({ x: 0, y: 0 });
   const [cursorSize, setCursorSize] = useState<32 | 48>(32);
@@ -165,18 +171,24 @@ export const RoleAssetEditor: React.FC<RoleAssetEditorProps> = ({
     setSelectedCurFile(null);
 
     const existing = roleMap.get(role);
+    const cursor = assets.find((asset) => asset.asset_id === existing?.asset_id);
+    const animation = cursor?.mime_type === ANI_MIME_TYPE ? cursor : null;
+    setAnimated(animation !== null);
+    setAniAsset(animation);
     if (existing) {
       setSelectedPreviewAssetId(existing.preview_asset_id);
       setSelectedCurAssetId(existing.asset_id);
       setHotspot({ x: existing.hotspot_x, y: existing.hotspot_y });
       setPreviewDataUrl(existing.preview_url || null);
       const width = assets.find((asset) => asset.asset_id === existing.preview_asset_id)?.width;
-      setCursorSize(width === 48 ? 48 : 32);
+      setPreviewSize(width ?? null);
+      setCursorSize((animation?.width ?? width) === 48 ? 48 : 32);
     } else {
       setSelectedPreviewAssetId(null);
       setSelectedCurAssetId(null);
       setHotspot({ x: 0, y: 0 });
       setPreviewDataUrl(null);
+      setPreviewSize(null);
       setCursorSize(32);
     }
   };
@@ -188,6 +200,8 @@ export const RoleAssetEditor: React.FC<RoleAssetEditorProps> = ({
     setPreviewDataUrl(null);
     setSelectedPreviewAssetId(null);
     setSelectedCurAssetId(null);
+    setAniAsset(null);
+    setPreviewSize(null);
     setErrorMessage(null);
     setConflictOccurred(false);
   };
@@ -199,6 +213,7 @@ export const RoleAssetEditor: React.FC<RoleAssetEditorProps> = ({
     setSelectedPreviewFile(null);
     setSelectedPreviewAssetId(null);
     setPreviewDataUrl(null);
+    setPreviewSize(null);
     setSelectedCurFile(null);
     setSelectedCurAssetId(null);
 
@@ -221,12 +236,44 @@ export const RoleAssetEditor: React.FC<RoleAssetEditorProps> = ({
         setErrorMessage(`Ảnh preview hiện là ${width}×${height} px. Hãy chọn PNG 32×32 hoặc 48×48 px.`);
         return;
       }
-      setCursorSize(width);
-      setHotspot({ x: 0, y: 0 });
+      setPreviewSize(width);
+      if (aniAsset === null) setCursorSize(width);
+      if (!animated) setHotspot({ x: 0, y: 0 });
       setSelectedPreviewFile(file);
       setPreviewDataUrl(URL.createObjectURL(file));
     } catch {
       setErrorMessage('Không đọc được ảnh PNG. Hãy xuất lại ảnh và thử lại.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleAniFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    if (!file.name.toLowerCase().endsWith('.ani') || file.size > 2 * 1024 * 1024) {
+      setErrorMessage('Hãy chọn file .ani không quá 2 MiB.');
+      return;
+    }
+    if (!etag) {
+      setErrorMessage('Vui lòng tải lại bản nháp trước khi tải ANI.');
+      return;
+    }
+    setIsSubmitting(true);
+    setErrorMessage(null);
+    try {
+      const asset = await uploadAsset(packId, { file, kind: 'cursor' }, etag);
+      const { width, height, hotspot_x, hotspot_y } = asset;
+      if (asset.mime_type !== ANI_MIME_TYPE || (width !== 32 && width !== 48) ||
+          height !== width || hotspot_x === null || hotspot_y === null) {
+        throw new Error('Backend chưa trả về một asset ANI hợp lệ.');
+      }
+      setAniAsset(asset);
+      setCursorSize(width);
+      setHotspot({ x: hotspot_x, y: hotspot_y });
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Không thể tải file ANI.');
     } finally {
       setIsSubmitting(false);
     }
@@ -298,8 +345,12 @@ export const RoleAssetEditor: React.FC<RoleAssetEditorProps> = ({
       return;
     }
     if ((!selectedPreviewFile && !selectedPreviewAssetId) ||
-        (!selectedCurFile && !selectedCurAssetId)) {
-      setErrorMessage('Hãy chọn ảnh preview và tạo hoặc tải file .cur trước khi lưu.');
+        (animated ? !aniAsset : !selectedCurFile && !selectedCurAssetId)) {
+      setErrorMessage('Hãy chọn PNG preview và chuẩn bị file con trỏ trước khi lưu.');
+      return;
+    }
+    if (aniAsset && previewSize !== aniAsset.width) {
+      setErrorMessage(`Hãy chọn PNG preview ${aniAsset.width}×${aniAsset.height} px khớp với ANI.`);
       return;
     }
 
@@ -309,7 +360,7 @@ export const RoleAssetEditor: React.FC<RoleAssetEditorProps> = ({
 
     try {
       let previewAssetId = selectedPreviewAssetId;
-      let curAssetId = selectedCurAssetId;
+      let curAssetId = animated ? aniAsset?.asset_id : selectedCurAssetId;
 
       // 1. Upload preview asset if user uploaded a new file
       if (selectedPreviewFile) {
@@ -578,6 +629,29 @@ export const RoleAssetEditor: React.FC<RoleAssetEditorProps> = ({
               </div>
             )}
 
+            {(aniEnabled || animated) && (
+              <label className="flex flex-wrap items-center gap-3 text-sm font-semibold text-ink">
+                Loại con trỏ
+                <select
+                  value={animated ? 'ani' : 'cur'}
+                  disabled={isSubmitting}
+                  onChange={(event) => {
+                    setAnimated(event.target.value === 'ani');
+                    setAniAsset(null);
+                    setSelectedCurFile(null);
+                    setSelectedCurAssetId(null);
+                    setCursorSize(previewSize === 48 ? 48 : 32);
+                    setHotspot({ x: 0, y: 0 });
+                    setErrorMessage(null);
+                  }}
+                  className="rounded-lg border border-line bg-raised px-3 py-2"
+                >
+                  <option value="cur">Tĩnh (.cur)</option>
+                  <option value="ani" disabled={!aniEnabled}>Động (.ani)</option>
+                </select>
+              </label>
+            )}
+
             {/* Step 1: Preview PNG Asset */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -634,8 +708,9 @@ export const RoleAssetEditor: React.FC<RoleAssetEditorProps> = ({
                           setPreviewDataUrl(found?.content_url || null);
                           setSelectedCurFile(null);
                           setSelectedCurAssetId(null);
-                          setCursorSize(found?.width === 48 ? 48 : 32);
-                          setHotspot({ x: 0, y: 0 });
+                          setPreviewSize(found?.width ?? null);
+                          if (aniAsset === null) setCursorSize(found?.width === 48 ? 48 : 32);
+                          if (!animated) setHotspot({ x: 0, y: 0 });
                           setErrorMessage(null);
                         }}
                         disabled={isSubmitting}
@@ -663,11 +738,11 @@ export const RoleAssetEditor: React.FC<RoleAssetEditorProps> = ({
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold uppercase tracking-wider text-muted">
-                  2. Chọn Điểm Neo (Hotspot) &amp; Cursor (.cur)
+                  {animated ? '2. File động (.ani) và điểm neo' : '2. Chọn Điểm Neo (Hotspot) & Cursor (.cur)'}
                 </label>
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-mono font-medium text-ink">
-                    Hotspot: ({hotspot.x}, {hotspot.y})
+                    {animated && !aniAsset ? 'Chưa có hotspot từ ANI' : `Hotspot: (${hotspot.x}, ${hotspot.y})`}
                   </span>
                 </div>
               </div>
@@ -680,11 +755,33 @@ export const RoleAssetEditor: React.FC<RoleAssetEditorProps> = ({
                   x={hotspot.x}
                   y={hotspot.y}
                   onChange={(point) => setHotspot(point)}
-                  onSizeChange={previewDataUrl ? undefined : setCursorSize}
-                  disabled={isSubmitting}
+                  onSizeChange={previewDataUrl || animated ? undefined : setCursorSize}
+                  disabled={isSubmitting || animated}
                 />
 
-                {/* Option to Auto-generate or Upload CUR */}
+                {animated ? (
+                  <div className="space-y-2 border-t border-line/70 pt-3">
+                    <label className="block text-xs font-semibold text-ink">
+                      Tải file .ani
+                      <input
+                        type="file"
+                        accept=".ani"
+                        disabled={isSubmitting || !aniEnabled}
+                        onChange={handleAniFileSelected}
+                        className="mt-2 block max-w-full text-xs"
+                      />
+                    </label>
+                    <p className="text-xs text-muted">
+                      PNG đại diện phải khớp khung hình được phát đầu tiên. Ảnh xem trước tĩnh,
+                      chuyển động khi áp dụng trong Windows. Điểm neo được đọc từ file ANI.
+                    </p>
+                    {aniAsset && (
+                      <p className="text-xs text-ink">
+                        ANI đã xác thực · {aniAsset.width}×{aniAsset.height} px
+                      </p>
+                    )}
+                  </div>
+                ) : (
                 <div className="pt-3 border-t border-line/70 flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <button
@@ -717,14 +814,15 @@ export const RoleAssetEditor: React.FC<RoleAssetEditorProps> = ({
                     </button>
                   </div>
                 </div>
+                )}
 
-                {selectedCurFile && (
+                {!animated && selectedCurFile && (
                   <div className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     Đã chuẩn bị file CUR: {selectedCurFile.name} ({(selectedCurFile.size / 1024).toFixed(1)} KB)
                   </div>
                 )}
-                {!selectedCurFile && selectedCurAssetId && (
+                {!animated && !selectedCurFile && selectedCurAssetId && (
                   <div className="flex items-center gap-2 text-xs text-muted font-mono">
                     <CheckCircle2 className="w-3.5 h-3.5 text-brand" />
                     Sử dụng CUR Asset hiện tại: {selectedCurAssetId.slice(0, 12)}...
@@ -747,7 +845,7 @@ export const RoleAssetEditor: React.FC<RoleAssetEditorProps> = ({
               <button
                 type="button"
                 onClick={handleSaveRole}
-                disabled={isSubmitting}
+                disabled={isSubmitting || (animated && !aniEnabled)}
                 className="px-5 py-2.5 rounded-xl bg-brand hover:bg-brand/90 text-white text-xs font-semibold shadow-md flex items-center gap-2 transition-colors disabled:opacity-50"
               >
                 {isSubmitting ? (

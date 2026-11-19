@@ -13,7 +13,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Request, Response
 from pydantic import AnyHttpUrl, BaseModel, TypeAdapter, ValidationError
-from sqlalchemy import func, or_, select
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.dialects.mysql import insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -53,7 +53,7 @@ from app.schemas.admin_pack import (
     RoleAssignment,
 )
 from app.schemas.catalog import ErrorDetail
-from app.services.admin_assets import InvalidAsset, private_storage
+from app.services.admin_assets import ANI_MIME_TYPE, InvalidAsset, private_storage
 from app.services.pack_publisher import (
     Report,
     Snapshot,
@@ -128,7 +128,7 @@ async def _read_json[Model: BaseModel](request: Request, schema: type[Model]) ->
         raise AuthProblem(422, "VALIDATION_ERROR", "Invalid pack metadata.") from None
 
 
-def _summary(pack: CursorPack, revision: int | None) -> PackSummary:
+def _summary(pack: CursorPack, revision: int | None, is_animated: bool) -> PackSummary:
     if not (1 <= pack.id <= MAX_SAFE_ID and 1 <= pack.category_id <= MAX_SAFE_ID):
         raise AuthProblem(
             503, "ID_OUT_OF_RANGE", "Pack or category ID exceeds the supported range."
@@ -140,7 +140,7 @@ def _summary(pack: CursorPack, revision: int | None) -> PackSummary:
         slug=pack.slug,
         description=pack.description,
         is_premium=pack.is_premium,
-        is_animated=pack.is_animated,
+        is_animated=is_animated,
         status=pack.status,
         managed=revision is not None,
         revision=revision,
@@ -174,7 +174,7 @@ def _asset_view(asset: AdminAsset) -> PackAsset:
 async def _detail(
     db: AsyncSession, pack: CursorPack, state: AdminPackState | None
 ) -> PackDetail:
-    summary = _summary(pack, state.revision if state is not None else None)
+    is_animated = pack.is_animated
     thumbnail = None
     thumbnail_url: str | None
     assets: list[PackAsset] = []
@@ -205,9 +205,18 @@ async def _detail(
         if state.thumbnail_asset_id is not None:
             thumbnail = asset_views.get(state.thumbnail_asset_id)
         thumbnail_url = thumbnail.content_url if thumbnail is not None else None
-        bindings = await db.scalars(
-            select(AdminPackRole).where(AdminPackRole.pack_id == pack.id)
-        )
+        bindings = (
+            await db.scalars(
+                select(AdminPackRole).where(AdminPackRole.pack_id == pack.id)
+            )
+        ).all()
+        if pack.status == PackStatus.DRAFT:
+            is_animated = any(
+                (cursor := asset_views.get(binding.asset_id)) is not None
+                and cursor.kind == AssetKind.CURSOR
+                and cursor.mime_type == ANI_MIME_TYPE
+                for binding in bindings
+            )
         roles = [
             PackRole(
                 role_type=binding.role_type,
@@ -220,6 +229,7 @@ async def _detail(
             for binding in bindings
         ]
     roles.sort(key=lambda role: _ROLE_ORDER[role.role_type])
+    summary = _summary(pack, state.revision if state is not None else None, is_animated)
     return PackDetail(
         **summary.model_dump(),
         thumbnail=thumbnail,
@@ -390,6 +400,26 @@ async def list_packs(
                 CursorPack.slug.contains(query.q, autoescape=True),
             )
         )
+    draft_has_ani = (
+        select(AdminPackRole.asset_id)
+        .join(AdminAsset, AdminAsset.id == AdminPackRole.asset_id)
+        .where(
+            AdminPackRole.pack_id == CursorPack.id,
+            AdminAsset.pack_id == CursorPack.id,
+            AdminAsset.kind == AssetKind.CURSOR,
+            AdminAsset.mime_type == ANI_MIME_TYPE,
+        )
+        .correlate(CursorPack)
+        .exists()
+    )
+    animated = case(
+        (
+            (CursorPack.status == PackStatus.DRAFT)
+            & AdminPackState.pack_id.is_not(None),
+            draft_has_ani,
+        ),
+        else_=CursorPack.is_animated,
+    )
     async with db.begin():
         total = (
             await db.scalar(
@@ -399,7 +429,7 @@ async def list_packs(
         )
         rows = (
             await db.execute(
-                select(CursorPack, AdminPackState.revision)
+                select(CursorPack, AdminPackState.revision, animated)
                 .outerjoin(AdminPackState, AdminPackState.pack_id == CursorPack.id)
                 .where(*filters)
                 .order_by(CursorPack.created_at.desc(), CursorPack.id.desc())
@@ -409,7 +439,10 @@ async def list_packs(
         ).all()
         pages = (total + query.limit - 1) // query.limit
         return PackPage(
-            items=[_summary(pack, revision) for pack, revision in rows],
+            items=[
+                _summary(pack, revision, bool(is_animated))
+                for pack, revision, is_animated in rows
+            ],
             pagination=PackPagination(
                 page=query.page,
                 limit=query.limit,
@@ -547,7 +580,12 @@ async def assign_role(
             async with _asset_validation():
                 store = private_storage(Settings.model_validate({}))
                 await validate_role_assets(
-                    store, cursor, preview, data.hotspot_x, data.hotspot_y
+                    store,
+                    cursor,
+                    preview,
+                    data.hotspot_x,
+                    data.hotspot_y,
+                    allow_ani=environ.get("ADMIN_ANI_UPLOAD_ENABLED") == "true",
                 )
             binding = await db.get(
                 AdminPackRole, (pack_id, role_type), with_for_update=True

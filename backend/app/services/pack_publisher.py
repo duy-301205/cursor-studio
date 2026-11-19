@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
+from os import environ
 from typing import NamedTuple
 from uuid import UUID
 
@@ -83,7 +84,6 @@ class Snapshot:
     slug: str
     description: str
     is_premium: bool
-    is_animated: bool
     thumbnail_id: bytes | None
     roles: tuple[Binding, ...]
 
@@ -129,7 +129,6 @@ async def capture(
         pack.slug,
         pack.description,
         pack.is_premium,
-        pack.is_animated,
         state.thumbnail_asset_id,
         tuple(
             Binding(
@@ -212,7 +211,6 @@ async def _validate(
                 "category_id": snapshot.category_id,
                 "description": snapshot.description,
                 "is_premium": snapshot.is_premium,
-                "is_animated": snapshot.is_animated,
             }
         )
     except ValidationError:
@@ -284,6 +282,7 @@ async def _validate(
                     preview,
                     binding.hotspot_x,
                     binding.hotspot_y,
+                    allow_ani=environ.get("ADMIN_ANI_UPLOAD_ENABLED") == "true",
                 )
                 cursor_url = urls.public_url(cursor.storage_key)
                 preview_url = urls.public_url(preview.storage_key)
@@ -362,6 +361,7 @@ async def publish_projection(
         row.hotspot_x = item.hotspot_x
         row.hotspot_y = item.hotspot_y
     pack.thumbnail_url = result.thumbnail_url
+    pack.is_animated = any(item.cursor_url.endswith(".ani") for item in result.roles)
     pack.status = PackStatus.PUBLISHED
 
 
@@ -408,7 +408,9 @@ async def published_asset(
 
 
 async def read_published_bytes(store: PrivateAssets, asset: AdminAsset) -> bytes:
-    expected_key = asset_key(asset.pack_id, UUID(bytes=asset.id), asset.kind)
+    expected_key = asset_key(
+        asset.pack_id, UUID(bytes=asset.id), asset.kind, mime_type=asset.mime_type
+    )
     if expected_key != asset.storage_key or not 0 < asset.byte_size <= MAX_UPLOAD_BYTES:
         raise StorageError("Invalid published registry metadata")
     content = await store.read(expected_key, max_bytes=asset.byte_size)
@@ -469,7 +471,9 @@ async def cleanup_pack_assets(
             if (
                 asset.id not in bindings
                 and asset.storage_key
-                == asset_key(pack_id, UUID(bytes=asset.id), asset.kind)
+                == asset_key(
+                    pack_id, UUID(bytes=asset.id), asset.kind, mime_type=asset.mime_type
+                )
                 and not _projected(asset.storage_key, projected)
             ):
                 await db.delete(asset)

@@ -45,9 +45,9 @@ def _password(from_stdin: bool) -> bytes:
         password = value.encode("utf-8")
     except (EOFError, UnicodeError, getpass.GetPassWarning):
         raise CommandError("Unable to read a password securely.") from None
-    if not 15 <= len(value) <= 128 or len(password) > 512:
+    if not 6 <= len(value) <= 128 or len(password) > 512:
         raise CommandError(
-            "Password must have 15–128 characters and at most 512 UTF-8 bytes."
+            "Password must have 6–128 characters and at most 512 UTF-8 bytes."
         )
     return password
 

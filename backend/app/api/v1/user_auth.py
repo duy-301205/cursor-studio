@@ -233,7 +233,7 @@ async def register_route(request: Request, db: UserDatabase) -> RegistrationResp
     require_trusted_origin(request, config.origin)
     await reserve_attempt(db, config.key, _peer(request))
     email, password, encoded = await _credentials(request)
-    if email is None or not 15 <= len(password) <= 128 or len(encoded) > 512:
+    if email is None or not 8 <= len(password) <= 128 or len(encoded) > 512:
         _event(request, "register", "invalid")
         raise AuthProblem(
             422, "VALIDATION_ERROR", "Email or password does not meet the requirements."

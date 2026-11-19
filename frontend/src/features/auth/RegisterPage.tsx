@@ -72,9 +72,9 @@ export function RegisterPage(): React.ReactElement {
       return;
     }
 
-    // Enforce password requirements per backend U01 contract (15-128 chars)
-    if (password.length < 15 || password.length > 128) {
-      setErrorMessage('Mật khẩu bảo mật phải có độ dài từ 15 đến 128 ký tự.');
+    // Enforce password requirements (8-128 chars)
+    if (password.length < 8 || password.length > 128) {
+      setErrorMessage('Mật khẩu bảo mật phải có độ dài từ 8 đến 128 ký tự.');
       return;
     }
 
@@ -103,7 +103,7 @@ export function RegisterPage(): React.ReactElement {
         if (err.isEmailUnavailable || err.status === 409) {
           setErrorMessage('Địa chỉ email này đã được sử dụng. Vui lòng đăng nhập hoặc dùng email khác.');
         } else if (err.isValidationError || err.status === 422) {
-          setErrorMessage('Email không hợp lệ hoặc mật khẩu chưa đáp ứng yêu cầu (từ 15 đến 128 ký tự).');
+          setErrorMessage('Email không hợp lệ hoặc mật khẩu chưa đáp ứng yêu cầu (từ 8 đến 128 ký tự).');
         } else if (err.isRateLimited) {
           const seconds = err.retryAfter ?? 60;
           setCountdown(seconds);
@@ -198,7 +198,7 @@ export function RegisterPage(): React.ReactElement {
               >
                 Mật khẩu
               </label>
-              <span className="text-[11px] text-muted">Tối thiểu 15 ký tự</span>
+              <span className="text-[11px] text-muted">Tối thiểu 8 ký tự</span>
             </div>
             <div className="relative rounded-xl shadow-sm">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-muted">
@@ -210,7 +210,7 @@ export function RegisterPage(): React.ReactElement {
                 type="password"
                 autoComplete="new-password"
                 required
-                minLength={15}
+                minLength={8}
                 maxLength={128}
                 disabled={isSubmitting || countdown !== null}
                 value={password}
@@ -222,10 +222,10 @@ export function RegisterPage(): React.ReactElement {
             <div className="flex items-center gap-1.5 text-[11px] text-muted pt-0.5">
               <CheckCircle2
                 className={`w-3.5 h-3.5 ${
-                  password.length >= 15 ? 'text-emerald-500' : 'text-muted'
+                  password.length >= 8 ? 'text-emerald-500' : 'text-muted'
                 }`}
               />
-              <span>Yêu cầu từ 15 đến 128 ký tự (Argon2id hashing)</span>
+              <span>Yêu cầu từ 8 đến 128 ký tự (Argon2id hashing)</span>
             </div>
           </div>
 

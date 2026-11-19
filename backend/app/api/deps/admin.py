@@ -152,6 +152,10 @@ def auth_config(request: Request) -> AuthConfig:
 
 
 def require_origin(request: Request, config: AuthConfig) -> None:
+    require_trusted_origin(request, config.origin)
+
+
+def require_trusted_origin(request: Request, origin: str) -> None:
     origins = request.headers.getlist("origin")
     referers = request.headers.getlist("referer")
     supplied = (
@@ -161,7 +165,7 @@ def require_origin(request: Request, config: AuthConfig) -> None:
         if not origins and len(referers) == 1
         else None
     )
-    if supplied != config.origin:
+    if supplied != origin:
         raise AuthProblem(403, "ORIGIN_DENIED", "Request origin denied.")
 
 

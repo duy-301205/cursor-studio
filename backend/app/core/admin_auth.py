@@ -79,6 +79,17 @@ def _verify_password(password: bytes, encoded: str) -> bool:
     return usable
 
 
+async def verify_password(password: bytes, encoded: str | None) -> bool:
+    """Run the shared bounded KDF, using a dummy hash for missing accounts."""
+    verified = await to_thread.run_sync(
+        _verify_password,
+        password,
+        encoded if encoded is not None else _DUMMY_PHC,
+        limiter=_HASH_LIMITER,
+    )
+    return encoded is not None and verified
+
+
 async def login(
     db: AsyncSession,
     username: str,
@@ -96,11 +107,9 @@ async def login(
                 ).where(AdminUser.username == username)
             )
         ).one_or_none()
-    encoded = row.password_hash if row and row.is_active else _DUMMY_PHC
-    verified = await to_thread.run_sync(
-        _verify_password, password, encoded, limiter=_HASH_LIMITER
-    )
-    if not verified or row is None or not row.is_active:
+    encoded = row.password_hash if row and row.is_active else None
+    verified = await verify_password(password, encoded)
+    if not verified or encoded is None or row is None or not row.is_active:
         return None
 
     replacement = (

@@ -24,6 +24,12 @@ from sqlalchemy.orm import contains_eager
 from sqlalchemy.sql.elements import ColumnElement
 from starlette.types import Receive, Scope, Send
 
+from app.api.deps.admin import AuthProblem
+from app.api.deps.user_features import (
+    PRIVATE_FEATURE_HEADERS,
+    authorize_user_feature,
+    feature_auth_required,
+)
 from app.core.config import Settings
 from app.db.session import get_db
 from app.models.category import Category
@@ -44,9 +50,26 @@ from app.schemas.catalog import (
     Pagination,
 )
 from app.services.admin_assets import ManagedAssetStorage, private_storage
-from app.services.pack_publisher import managed_prefix
-from app.services.storage import Storage, StorageError, create_storage
-from app.services.zip_packager import AssetUnavailable, PackIncomplete, build_pack_zip
+from app.services.pack_publisher import (
+    managed_prefix,
+    published_asset,
+    read_published_bytes,
+)
+from app.services.storage import (
+    MAX_ASSET_BYTES,
+    AssetNotFound,
+    Storage,
+    StorageError,
+    create_storage,
+)
+from app.services.zip_packager import (
+    AssetUnavailable,
+    PackIncomplete,
+    _asset_extension,
+    _validate_ani,
+    _validate_cur,
+    build_pack_zip,
+)
 
 logger = logging.getLogger(__name__)
 Session = Annotated[AsyncSession, Depends(get_db)]
@@ -75,8 +98,20 @@ class CatalogRoute(APIRoute):
         async def handle(request: Request) -> Response:
             request_id = f"req_{uuid4().hex}"
             request.state.request_id = request_id
+            raw_cursor = self.path.endswith("/cursor.{ext}")
+            protected = feature_auth_required() and (
+                raw_cursor or self.path.endswith("/download")
+            )
             try:
+                if raw_cursor and not protected:
+                    raise HTTPException(status_code=404)
+                if protected:
+                    await authorize_user_feature(request)
                 response = await handler(request)
+            except AuthProblem as exc:
+                response = _error(
+                    exc.status, exc.code, exc.message, request_id, exc.details
+                )
             except RateLimitExceeded:
                 response = _error(
                     429, "RATE_LIMITED", "Too many downloads.", request_id
@@ -113,6 +148,8 @@ class CatalogRoute(APIRoute):
                 response = _error(
                     500, "INTERNAL_ERROR", "Unable to load the catalog.", request_id
                 )
+            if protected or raw_cursor:
+                response.headers.update(PRIVATE_FEATURE_HEADERS)
             response.headers["X-Request-ID"] = request_id
             return response
 
@@ -142,6 +179,14 @@ router = APIRouter(
     route_class=CatalogRoute,
     responses={500: {"model": ErrorResponse}},
 )
+
+
+def _public_cursor(item: CursorItem) -> CursorAsset:
+    cursor = CursorAsset.model_validate(item)
+    if feature_auth_required():
+        suffix = _asset_extension(item.cursor_file_url)
+        cursor.cursor_file_url = f"/api/v1/packs/{item.pack_id}/assets/{item.role_type.value}/cursor.{suffix}"
+    return cursor
 
 
 @router.get("/categories")
@@ -226,7 +271,7 @@ async def packs(
         items = [
             PackCard.model_validate(
                 {
-                    "pointer": CursorAsset.model_validate(pointer),
+                    "pointer": _public_cursor(pointer),
                     **PackSummary.model_validate(pack).model_dump(),
                 }
             )
@@ -270,7 +315,10 @@ async def pack_detail(slug: str, response: Response, session: Session) -> PackDe
         {
             **PackSummary.model_validate(pack).model_dump(),
             "updated_at": pack.updated_at,
-            "cursor_items": [PackCursor.model_validate(item) for item in items],
+            "cursor_items": [
+                PackCursor(id=item.id, **_public_cursor(item).model_dump())
+                for item in items
+            ],
         }
     )
 
@@ -390,3 +438,62 @@ async def download_pack(
     finally:
         if not handing_off:
             _download_slots.release()
+
+
+@router.api_route(
+    "/packs/{id}/assets/{role}/cursor.{ext}",
+    methods=["GET", "HEAD"],
+    include_in_schema=False,
+)
+@_download_limiter.limit("30/minute")
+async def download_cursor_asset(
+    id: Annotated[int, Path(gt=0, le=(1 << 64) - 1)],
+    role: CursorRole,
+    ext: str,
+    request: Request,
+    session: Session,
+) -> Response:
+    url = await session.scalar(
+        select(CursorItem.cursor_file_url)
+        .join(CursorPack, CursorPack.id == CursorItem.pack_id)
+        .where(CursorPack.id == id, _PUBLISHED, CursorItem.role_type == role)
+    )
+    if url is None or ext not in {"cur", "ani"}:
+        raise HTTPException(status_code=404)
+    try:
+        if _asset_extension(url) != ext:
+            raise HTTPException(status_code=404)
+        settings = _download_settings()
+        prefix = managed_prefix(settings)
+        if url.startswith(prefix + "managed/"):
+            asset = await published_asset(session, id, url[len(prefix) :], url)
+            if asset is None:
+                raise HTTPException(status_code=404)
+            # The session is rolled back before storage I/O. Keep the immutable row.
+            session.expunge(asset)
+            await session.rollback()
+            binary = await read_published_bytes(private_storage(settings), asset)
+        else:
+            await session.rollback()
+            storage = await to_thread.run_sync(_download_storage, False)
+            binary = await storage.read_asset(url, max_bytes=MAX_ASSET_BYTES)
+        await to_thread.run_sync(
+            _validate_cur if ext == "cur" else _validate_ani, binary
+        )
+    except AssetNotFound:
+        raise HTTPException(status_code=404) from None
+    except (AssetUnavailable, StorageError):
+        return _error(
+            502,
+            "ASSET_UNAVAILABLE",
+            "Cursor asset is unavailable.",
+            request.state.request_id,
+        )
+    return Response(
+        binary if request.method == "GET" else None,
+        media_type="application/octet-stream",
+        headers={
+            "Content-Length": str(len(binary)),
+            "Content-Disposition": f'attachment; filename="{role.value}.{ext}"',
+        },
+    )

@@ -42,6 +42,11 @@ services:
       ADMIN_CSRF_KEY: ${ADMIN_CSRF_KEY:-}
       ADMIN_DRAFT_THUMBNAIL_URL: ${ADMIN_DRAFT_THUMBNAIL_URL:-}
       ADMIN_ASSET_LOCAL_ROOT: /var/lib/cursor-studio/admin-assets
+      USER_AUTH_ENABLED: "${USER_AUTH_ENABLED:-false}"
+      USER_FEATURE_AUTH_REQUIRED: "${USER_FEATURE_AUTH_REQUIRED:-false}"
+      USER_ORIGIN: ${USER_ORIGIN:-http://localhost:5173}
+      USER_ALLOW_LOOPBACK_HTTP: "${USER_ALLOW_LOOPBACK_HTTP:-false}"
+      USER_CSRF_KEY: ${USER_CSRF_KEY:-}
     volumes:
       - ./backend:/app
       - admin_dev_assets:/var/lib/cursor-studio/admin-assets

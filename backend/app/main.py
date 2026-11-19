@@ -20,11 +20,14 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from starlette.staticfiles import StaticFiles
 from starlette.types import Receive, Scope, Send
 
+from app.api.deps.user_features import feature_auth_required
 from app.api.v1.admin_assets import router as admin_assets_router
 from app.api.v1.admin_auth import router as admin_auth_router
 from app.api.v1.admin_packs import router as admin_packs_router
 from app.api.v1.catalog import router as catalog_router
+from app.api.v1.studio import admin_tools_router
 from app.api.v1.studio import router as studio_router
+from app.api.v1.user_auth import router as user_auth_router
 from app.core.config import Settings
 from app.db.seed import SAMPLES_DIRECTORY, seed_development
 from app.db.session import DatabaseState, database_lifespan, get_db
@@ -95,14 +98,36 @@ app.include_router(admin_assets_router)
 app.include_router(admin_packs_router)
 app.include_router(catalog_router)
 app.include_router(studio_router)
+app.include_router(admin_tools_router)
+app.include_router(user_auth_router)
 
 mimetypes.add_type("image/webp", ".webp")
 _sample_files = StaticFiles(directory=SAMPLES_DIRECTORY, check_dir=False)
 
 
+def _public_sample_image(path: str) -> bool:
+    relative = path.removeprefix("/static/samples/")
+    if relative == path:
+        return False
+    try:
+        root = SAMPLES_DIRECTORY.resolve()
+        resolved = (root / relative).resolve()
+    except (OSError, RuntimeError, ValueError):
+        return False
+    return resolved.is_relative_to(root) and resolved.suffix.lower() in {
+        ".png",
+        ".webp",
+    }
+
+
 async def _serve_samples(scope: Scope, receive: Receive, send: Send) -> None:
     if scope.get("state", {}).get("app_env") != "development":
         await Response(status_code=404)(scope, receive, send)
+        return
+    if feature_auth_required() and not await to_thread.run_sync(
+        _public_sample_image, scope["path"]
+    ):
+        await Response(status_code=404, headers=_MEDIA_HEADERS)(scope, receive, send)
         return
     await _sample_files(scope, receive, send)
 
@@ -150,6 +175,8 @@ async def managed_media(
     ):
         return Response(status_code=404, headers=headers)
     raw_id, _, extension = filename.rpartition(".")
+    if feature_auth_required() and extension in {"cur", "ani"}:
+        return Response(status_code=404, headers=headers)
     format_info = _MEDIA_TYPES.get(extension)
     if format_info is None:
         return Response(status_code=404, headers=headers)

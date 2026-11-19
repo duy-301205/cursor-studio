@@ -27,6 +27,12 @@ from starlette.formparsers import MultiPartException, MultiPartParser
 from starlette.requests import ClientDisconnect
 from starlette.types import Message
 
+from app.api.deps.admin import ADMIN_PREFIX, AdminDependency, AuthProblem
+from app.api.deps.user_features import (
+    PRIVATE_FEATURE_HEADERS,
+    authorize_user_feature,
+    feature_auth_required,
+)
 from app.core.config import Settings
 from app.db.session import get_db
 from app.schemas.catalog import CatalogError, ErrorDetail, ErrorResponse
@@ -108,10 +114,20 @@ class StudioRoute(APIRoute):
 
         async def handle(request: Request) -> Response:
             request_id = f"req_{uuid4().hex}"
+            protected = (
+                self.path.startswith("/api/v1/studio/") and feature_auth_required()
+            )
             try:
+                if protected:
+                    await authorize_user_feature(request)
                 if request.method == "POST" and self.path.endswith("/share"):
                     request = await _bounded_share_request(request)
                 response = await handler(request)
+            except AuthProblem as exc:
+                response = _error_response(
+                    _ConversionError(exc.status, exc.code, exc.message, exc.details),
+                    request_id,
+                )
             except RateLimitExceeded:
                 response = _error_response(
                     _ConversionError(429, "RATE_LIMITED", "Too many requests."),
@@ -136,6 +152,8 @@ class StudioRoute(APIRoute):
                     ),
                     request_id,
                 )
+            if protected:
+                response.headers.update(PRIVATE_FEATURE_HEADERS)
             response.headers["X-Request-ID"] = request_id
             return response
 
@@ -143,6 +161,9 @@ class StudioRoute(APIRoute):
 
 
 router = APIRouter(prefix="/api/v1/studio", tags=["studio"], route_class=StudioRoute)
+admin_tools_router = APIRouter(
+    prefix=ADMIN_PREFIX + "/tools", route_class=StudioRoute, include_in_schema=False
+)
 
 
 async def _limited_stream(request: Request) -> AsyncGenerator[bytes, None]:
@@ -322,6 +343,16 @@ def _convert_image(data: bytes, geometry: ConvertGeometry) -> bytes:
 )
 @_limiter.limit("10/minute")
 async def convert(request: Request) -> Response:
+    return await _convert_request(request)
+
+
+@admin_tools_router.post("/convert", response_class=Response)
+@_limiter.limit("10/minute")
+async def admin_convert(request: Request, identity: AdminDependency) -> Response:
+    return await _convert_request(request)
+
+
+async def _convert_request(request: Request) -> Response:
     data, geometry = await _read_upload(request)
     try:
         with fail_after(10):

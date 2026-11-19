@@ -263,7 +263,7 @@ export function RegisterPage(): React.ReactElement {
               isSubmitting ||
               countdown !== null ||
               !email ||
-              password.length < 15 ||
+              password.length < 8 ||
               password !== confirmPassword
             }
             className="w-full mt-2 py-3 px-4 rounded-xl bg-brand hover:bg-brand-hover text-white text-sm font-bold shadow-card transition-all duration-150 flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"

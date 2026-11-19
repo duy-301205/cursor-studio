@@ -17,6 +17,7 @@ import type {
   ApiErrorResponse,
   FastApiValidationResponse,
 } from '../types/api';
+import { getUserCsrfToken } from './userApi.ts';
 
 /**
  * Standardized API Error class for frontend error handling.
@@ -136,9 +137,23 @@ function createRequestInit(
   body?: BodyInit,
   options?: RequestOptions
 ): RequestInit {
-  const init: RequestInit = { method };
-  if (headers) {
-    init.headers = headers;
+  const init: RequestInit = {
+    method,
+    credentials: 'include',
+  };
+  const requestHeaders: Record<string, string> = { ...(headers || {}) };
+
+  // For mutations (POST, PUT, DELETE, PATCH), attach in-memory User CSRF token if available
+  const isMutation = method !== 'GET' && method !== 'HEAD';
+  if (isMutation) {
+    const userCsrf = getUserCsrfToken();
+    if (userCsrf && !requestHeaders['X-CSRF-Token']) {
+      requestHeaders['X-CSRF-Token'] = userCsrf;
+    }
+  }
+
+  if (Object.keys(requestHeaders).length > 0) {
+    init.headers = requestHeaders;
   }
   if (body) {
     init.body = body;

@@ -25,6 +25,8 @@ import { AdminLoginPage } from './features/admin/AdminLoginPage.tsx';
 import { AdminPacksPage } from './features/admin/AdminPacksPage.tsx';
 import { AdminPackEditorPage } from './features/admin/AdminPackEditorPage.tsx';
 import { UserAuthProvider } from './components/UserAuthProvider.tsx';
+import { UserRoute } from './components/UserRoute.tsx';
+import { UserNav } from './components/UserNav.tsx';
 import { LoginPage } from './features/auth/LoginPage.tsx';
 import { RegisterPage } from './features/auth/RegisterPage.tsx';
 
@@ -87,169 +89,196 @@ export default function App(): React.ReactElement {
   const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
 
   return (
-    <div className="min-h-screen flex flex-col bg-canvas text-ink transition-colors duration-150">
-      {/* ============================================================ */}
-      {/* 1. Header & Navigation                                       */}
-      {/* ============================================================ */}
-      <header className="sticky top-0 z-20 bg-surface/90 backdrop-blur-md border-b border-line">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 sm:h-20">
-            {/* Wordmark / Brand Logo */}
-            <NavLink
-              to="/"
-              className="flex items-center gap-3 group focus:outline-none focus-visible:ring-2 focus-visible:ring-focus rounded-lg py-1 px-2 -ml-2 transition-transform duration-150 active:scale-95"
-            >
-              <div className="w-10 h-10 rounded-xl bg-brand text-white flex items-center justify-center shadow-card group-hover:scale-105 transition-transform duration-150">
-                <MousePointer className="w-5 h-5 fill-current" />
+    <UserAuthProvider>
+      <AdminAuthProvider>
+        <div className="min-h-screen flex flex-col bg-canvas text-ink transition-colors duration-150">
+          {/* ============================================================ */}
+          {/* 1. Header & Navigation                                       */}
+          {/* ============================================================ */}
+          <header className="sticky top-0 z-20 bg-surface/90 backdrop-blur-md border-b border-line">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center justify-between h-16 sm:h-20">
+                {/* Wordmark / Brand Logo */}
+                <NavLink
+                  to="/"
+                  className="flex items-center gap-3 group focus:outline-none focus-visible:ring-2 focus-visible:ring-focus rounded-lg py-1 px-2 -ml-2 transition-transform duration-150 active:scale-95"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-brand text-white flex items-center justify-center shadow-card group-hover:scale-105 transition-transform duration-150">
+                    <MousePointer className="w-5 h-5 fill-current" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="font-extrabold text-lg sm:text-xl tracking-tight text-ink">
+                      Custom Cursor <span className="text-brand">Studio</span>
+                    </span>
+                    <span className="text-xs text-muted font-medium tracking-wide hidden sm:block">
+                      Creative Windows Asset Hub
+                    </span>
+                  </div>
+                </NavLink>
+
+                {/* Desktop & Tablet Navigation */}
+                <nav className="hidden md:flex items-center gap-1 sm:gap-2">
+                  <NavLink
+                    to="/"
+                    end
+                    className={({ isActive }) =>
+                      `flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all duration-150 ${
+                        isActive
+                          ? 'bg-brand-soft text-brand'
+                          : 'text-muted hover:text-ink hover:bg-raised'
+                      }`
+                    }
+                  >
+                    <Compass className="w-4 h-4" />
+                    Explore
+                  </NavLink>
+
+                  <NavLink
+                    to="/studio"
+                    className={({ isActive }) =>
+                      `flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all duration-150 ${
+                        isActive
+                          ? 'bg-brand-soft text-brand'
+                          : 'text-muted hover:text-ink hover:bg-raised'
+                      }`
+                    }
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    Studio
+                  </NavLink>
+
+                  <NavLink
+                    to="/mix"
+                    className={({ isActive }) =>
+                      `flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all duration-150 ${
+                        isActive
+                          ? 'bg-brand-soft text-brand'
+                          : 'text-muted hover:text-ink hover:bg-raised'
+                      }`
+                    }
+                  >
+                    <Layers className="w-4 h-4" />
+                    Mix &amp; Match
+                  </NavLink>
+                </nav>
+
+                {/* Right Side Actions: User Account, Theme Switcher & Mobile Menu Button */}
+                <div className="flex items-center gap-2 sm:gap-3">
+                  {/* User & Admin Account Navigation (Task U06) */}
+                  <UserNav />
+
+                  <button
+                    type="button"
+                    onClick={toggleTheme}
+                    aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
+                    className="w-10 h-10 rounded-xl bg-raised border border-line flex items-center justify-center text-ink hover:bg-surface hover:border-brand/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus transition-all duration-150 shadow-sm"
+                  >
+                    {theme === 'light' ? (
+                      <Moon className="w-5 h-5 text-muted hover:text-ink transition-colors" />
+                    ) : (
+                      <Sun className="w-5 h-5 text-warning transition-colors" />
+                    )}
+                  </button>
+
+                  {/* Hamburger Button for Mobile */}
+                  <button
+                    type="button"
+                    onClick={() => setMobileMenuOpen((prev) => !prev)}
+                    aria-label="Toggle navigation menu"
+                    aria-expanded={mobileMenuOpen}
+                    className="md:hidden w-10 h-10 rounded-xl bg-raised border border-line flex items-center justify-center text-ink hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-focus transition-all duration-150"
+                  >
+                    {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                  </button>
+                </div>
               </div>
-              <div className="flex flex-col">
-                <span className="font-extrabold text-lg sm:text-xl tracking-tight text-ink">
-                  Custom Cursor <span className="text-brand">Studio</span>
-                </span>
-                <span className="text-xs text-muted font-medium tracking-wide hidden sm:block">
-                  Creative Windows Asset Hub
-                </span>
-              </div>
-            </NavLink>
-
-            {/* Desktop & Tablet Navigation */}
-            <nav className="hidden md:flex items-center gap-1 sm:gap-2">
-              <NavLink
-                to="/"
-                end
-                className={({ isActive }) =>
-                  `flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all duration-150 ${
-                    isActive
-                      ? 'bg-brand-soft text-brand'
-                      : 'text-muted hover:text-ink hover:bg-raised'
-                  }`
-                }
-              >
-                <Compass className="w-4 h-4" />
-                Explore
-              </NavLink>
-
-              <NavLink
-                to="/studio"
-                className={({ isActive }) =>
-                  `flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all duration-150 ${
-                    isActive
-                      ? 'bg-brand-soft text-brand'
-                      : 'text-muted hover:text-ink hover:bg-raised'
-                  }`
-                }
-              >
-                <Sparkles className="w-4 h-4" />
-                Studio
-              </NavLink>
-
-              <NavLink
-                to="/mix"
-                className={({ isActive }) =>
-                  `flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all duration-150 ${
-                    isActive
-                      ? 'bg-brand-soft text-brand'
-                      : 'text-muted hover:text-ink hover:bg-raised'
-                  }`
-                }
-              >
-                <Layers className="w-4 h-4" />
-                Mix &amp; Match
-              </NavLink>
-            </nav>
-
-            {/* Right Side Actions: Theme Switcher & Mobile Menu Button */}
-            <div className="flex items-center gap-2 sm:gap-3">
-              <button
-                type="button"
-                onClick={toggleTheme}
-                aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
-                className="w-10 h-10 rounded-xl bg-raised border border-line flex items-center justify-center text-ink hover:bg-surface hover:border-brand/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus transition-all duration-150 shadow-sm"
-              >
-                {theme === 'light' ? (
-                  <Moon className="w-5 h-5 text-muted hover:text-ink transition-colors" />
-                ) : (
-                  <Sun className="w-5 h-5 text-warning transition-colors" />
-                )}
-              </button>
-
-              {/* Hamburger Button for Mobile */}
-              <button
-                type="button"
-                onClick={() => setMobileMenuOpen((prev) => !prev)}
-                aria-label="Toggle navigation menu"
-                aria-expanded={mobileMenuOpen}
-                className="md:hidden w-10 h-10 rounded-xl bg-raised border border-line flex items-center justify-center text-ink hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-focus transition-all duration-150"
-              >
-                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-              </button>
             </div>
-          </div>
-        </div>
 
-        {/* Mobile Navigation Drawer */}
-        {mobileMenuOpen && (
-          <div className="md:hidden border-t border-line bg-surface px-4 pt-3 pb-6 space-y-1 shadow-float">
-            <NavLink
-              to="/"
-              end
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold transition-colors ${
-                  isActive
-                    ? 'bg-brand-soft text-brand'
-                    : 'text-ink hover:bg-raised'
-                }`
-              }
-            >
-              <Compass className="w-5 h-5" />
-              Explore Gallery
-            </NavLink>
+            {/* Mobile Navigation Drawer */}
+            {mobileMenuOpen && (
+              <div className="md:hidden border-t border-line bg-surface px-4 pt-3 pb-6 space-y-1 shadow-float">
+                <NavLink
+                  to="/"
+                  end
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold transition-colors ${
+                      isActive
+                        ? 'bg-brand-soft text-brand'
+                        : 'text-ink hover:bg-raised'
+                    }`
+                  }
+                >
+                  <Compass className="w-5 h-5" />
+                  Explore Gallery
+                </NavLink>
 
-            <NavLink
-              to="/studio"
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold transition-colors ${
-                  isActive
-                    ? 'bg-brand-soft text-brand'
-                    : 'text-ink hover:bg-raised'
-                }`
-              }
-            >
-              <Sparkles className="w-5 h-5" />
-              Photo Studio
-            </NavLink>
+                <NavLink
+                  to="/studio"
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold transition-colors ${
+                      isActive
+                        ? 'bg-brand-soft text-brand'
+                        : 'text-ink hover:bg-raised'
+                    }`
+                  }
+                >
+                  <Sparkles className="w-5 h-5" />
+                  Photo Studio
+                </NavLink>
 
-            <NavLink
-              to="/mix"
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold transition-colors ${
-                  isActive
-                    ? 'bg-brand-soft text-brand'
-                    : 'text-ink hover:bg-raised'
-                }`
-              }
-            >
-              <Layers className="w-5 h-5" />
-              Mix &amp; Match
-            </NavLink>
-          </div>
-        )}
-      </header>
+                <NavLink
+                  to="/mix"
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold transition-colors ${
+                      isActive
+                        ? 'bg-brand-soft text-brand'
+                        : 'text-ink hover:bg-raised'
+                    }`
+                  }
+                >
+                  <Layers className="w-5 h-5" />
+                  Mix &amp; Match
+                </NavLink>
 
-      {/* ============================================================ */}
-      {/* 2. Main Layout & Structured Route Placeholders               */}
-      {/* ============================================================ */}
-      <UserAuthProvider>
-        <AdminAuthProvider>
+                {/* Mobile User Account Navigation (Task U06) */}
+                <UserNav isMobile onNavigate={() => setMobileMenuOpen(false)} />
+              </div>
+            )}
+          </header>
+
+          {/* ============================================================ */}
+          {/* 2. Main Layout & Structured Route Placeholders               */}
+          {/* ============================================================ */}
           <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
             <Routes>
               <Route path="/" element={<GalleryPage />} />
               <Route path="/packs" element={<GalleryPage />} />
               <Route path="/packs/:slug" element={<PackDetailPage />} />
               <Route path="/pack/:slug" element={<PackDetailPage />} />
-              <Route path="/studio" element={<StudioPage />} />
-              <Route path="/mix" element={<MixPage />} />
-              <Route path="/mix/:code" element={<MixPage />} />
+              <Route
+                path="/studio"
+                element={
+                  <UserRoute>
+                    <StudioPage />
+                  </UserRoute>
+                }
+              />
+              <Route
+                path="/mix"
+                element={
+                  <UserRoute>
+                    <MixPage />
+                  </UserRoute>
+                }
+              />
+              <Route
+                path="/mix/:code"
+                element={
+                  <UserRoute>
+                    <MixPage />
+                  </UserRoute>
+                }
+              />
 
               {/* Shared User & Admin Auth Routes */}
               <Route path="/login" element={<LoginPage />} />
@@ -289,8 +318,6 @@ export default function App(): React.ReactElement {
               <Route path="*" element={<NotFoundPlaceholder />} />
             </Routes>
           </main>
-        </AdminAuthProvider>
-      </UserAuthProvider>
 
       {/* Persistent Mix & Match Dock across public views (hidden in Admin) */}
       {!location.pathname.startsWith('/admin') && (
@@ -375,7 +402,9 @@ export default function App(): React.ReactElement {
           </div>
         </div>
       </footer>
-    </div>
+        </div>
+      </AdminAuthProvider>
+    </UserAuthProvider>
   );
 }
 

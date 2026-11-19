@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, NavLink } from 'react-router-dom';
+import { useParams, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   ArrowLeft,
   Download,
@@ -12,10 +12,12 @@ import {
   MousePointer,
   HelpCircle,
   Plus,
+  LogIn,
 } from 'lucide-react';
 import { apiClient, ApiError } from '../../lib/api';
 import { InteractiveSandbox } from '../../components/InteractiveSandbox';
 import { useLocalMix } from '../mix/mixStorage';
+import { useUserAuth } from '../../components/UserAuthProvider.tsx';
 import type { PackDetail, CursorAsset, CursorRole, PackCursor } from '../../types/api';
 
 const ROLE_DISPLAY_NAMES: Record<CursorRole, { name: string; slot: string; description: string }> = {
@@ -31,6 +33,9 @@ const ROLE_DISPLAY_NAMES: Record<CursorRole, { name: string; slot: string; descr
 
 export function PackDetailPage(): React.ReactElement {
   const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { isAuthenticated } = useUserAuth();
 
   const [pack, setPack] = useState<PackDetail | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -104,6 +109,12 @@ export function PackDetailPage(): React.ReactElement {
   const handleDownload = async (): Promise<void> => {
     if (!pack || isDownloading) return;
 
+    if (!isAuthenticated) {
+      const returnUrl = encodeURIComponent(location.pathname + location.search);
+      navigate(`/login?returnUrl=${returnUrl}`);
+      return;
+    }
+
     setIsDownloading(true);
     setDownloadError(null);
     setDownloadSuccess(false);
@@ -125,7 +136,11 @@ export function PackDetailPage(): React.ReactElement {
       setTimeout(() => setDownloadSuccess(false), 5000);
     } catch (err: unknown) {
       if (err instanceof ApiError) {
-        if (err.status === 409) {
+        if (err.status === 401 || err.code === 'AUTH_REQUIRED') {
+          const returnUrl = encodeURIComponent(location.pathname + location.search);
+          navigate(`/login?returnUrl=${returnUrl}`);
+          return;
+        } else if (err.status === 409) {
           setDownloadError('This cursor pack is incomplete and cannot be packaged as a 15-slot ZIP.');
         } else if (err.status === 502) {
           setDownloadError('Storage service temporarily unavailable. Please try again shortly.');
@@ -321,7 +336,31 @@ export function PackDetailPage(): React.ReactElement {
           </p>
         </div>
 
-        <InteractiveSandbox rolePreviews={rolePreviews} />
+        <div className="relative">
+          <InteractiveSandbox rolePreviews={rolePreviews} />
+          {!isAuthenticated && (
+            <div className="absolute inset-0 bg-surface/75 backdrop-blur-[2px] rounded-card flex flex-col items-center justify-center p-6 text-center space-y-3 z-10 border border-line">
+              <div className="w-12 h-12 rounded-2xl bg-brand/10 text-brand flex items-center justify-center">
+                <MousePointer className="w-6 h-6" />
+              </div>
+              <h3 className="font-bold text-lg text-ink">Thử con trỏ trong Interactive Sandbox</h3>
+              <p className="text-sm text-muted max-w-md">
+                Đăng nhập để trải nghiệm trực tiếp 8 trạng thái con trỏ và chuyển đổi môi trường sáng/tối.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  const returnUrl = encodeURIComponent(location.pathname + location.search);
+                  navigate(`/login?returnUrl=${returnUrl}`);
+                }}
+                className="px-5 py-2.5 rounded-xl bg-brand hover:bg-brand-hover text-white text-sm font-semibold transition-colors flex items-center gap-2 shadow-sm"
+              >
+                <LogIn className="w-4 h-4" />
+                Đăng nhập để thử trong Sandbox
+              </button>
+            </div>
+          )}
+        </div>
       </section>
 
       {/* ============================================================ */}
@@ -382,6 +421,11 @@ export function PackDetailPage(): React.ReactElement {
                   <button
                     type="button"
                     onClick={() => {
+                      if (!isAuthenticated) {
+                        const returnUrl = encodeURIComponent(location.pathname + location.search);
+                        navigate(`/login?returnUrl=${returnUrl}`);
+                        return;
+                      }
                       assignRole(item.role_type, {
                         pack_id: pack.id,
                         pack_title: pack.title,

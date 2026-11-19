@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   Search,
   X,
@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { apiClient } from '../../lib/api';
 import { PackCard } from '../../components/PackCard';
+import { useUserAuth } from '../../components/UserAuthProvider.tsx';
 import type {
   CategoryEntry,
   PackCard as PackCardType,
@@ -22,6 +23,9 @@ import type {
 
 export function GalleryPage(): React.ReactElement {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { isAuthenticated } = useUserAuth();
 
   // URL state extractions
   const currentCategory = searchParams.get('category') || '';
@@ -397,7 +401,14 @@ export function GalleryPage(): React.ReactElement {
               <PackCard
                 key={card.id}
                 card={card}
-                onTry={(c) => setTestedPack(c)}
+                onTry={(c) => {
+                  if (!isAuthenticated) {
+                    const returnUrl = encodeURIComponent(location.pathname + location.search);
+                    navigate(`/login?returnUrl=${returnUrl}`);
+                    return;
+                  }
+                  setTestedPack(c);
+                }}
               />
             ))}
           </div>

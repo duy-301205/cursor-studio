@@ -24,6 +24,8 @@ import type {
   AdminRequestOptions,
   AdminAssetKind,
   AdminPackStatus,
+  AdminConvertCursorParams,
+  AdminConvertCursorResult,
 } from '../types/admin.ts';
 
 /**
@@ -1121,6 +1123,41 @@ export async function unpublishPack(
 }
 
 /**
+ * 14. POST /api/v1/admin/tools/convert
+ * Generates a Windows .cur binary file using Admin credentials and in-memory CSRF token.
+ * Strictly decoupled from public/user conversion routes (Task U04/U07).
+ */
+export async function adminConvertCursor(
+  params: AdminConvertCursorParams,
+  options?: AdminRequestOptions
+): Promise<AdminConvertCursorResult> {
+  const formData = new FormData();
+  formData.append('file', params.file);
+  formData.append('size', String(params.size));
+  formData.append('hotspot_x', String(params.hotspot_x));
+  formData.append('hotspot_y', String(params.hotspot_y));
+
+  const response = await executeAdminRequest({
+    method: 'POST',
+    path: '/tools/convert',
+    body: formData,
+    options,
+  });
+
+  const blob = await response.blob();
+  const disposition = response.headers.get('content-disposition');
+  let filename = 'cursor.cur';
+  if (disposition) {
+    const match = disposition.match(/filename="?([^";]+)"?/i);
+    if (match?.[1]) {
+      filename = match[1];
+    }
+  }
+
+  return { blob, filename };
+}
+
+/**
  * Grouped Admin API Client Object
  */
 export const adminApi = {
@@ -1137,6 +1174,7 @@ export const adminApi = {
   validatePack,
   publishPack,
   unpublishPack,
+  adminConvertCursor,
   getCsrfToken,
   setCsrfToken,
   clearCsrfToken,

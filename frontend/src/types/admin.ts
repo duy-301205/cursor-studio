@@ -213,4 +213,22 @@ export interface AdminRequestOptions {
   ifMatch?: string | undefined;
 }
 
+/**
+ * Parameters for POST /api/v1/admin/tools/convert (Task U04/U07)
+ */
+export interface AdminConvertCursorParams {
+  file: Blob | File;
+  size: 32 | 48;
+  hotspot_x: number;
+  hotspot_y: number;
+}
+
+/**
+ * Result returned by POST /api/v1/admin/tools/convert
+ */
+export interface AdminConvertCursorResult {
+  blob: Blob;
+  filename: string;
+}
+
 export type { ApiErrorDetail };

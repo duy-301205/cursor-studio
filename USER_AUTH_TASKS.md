@@ -153,14 +153,14 @@ POST /auth/logout    Cookie User + X-CSRF-Token
 - **Yêu cầu** — Giữ giao diện nhận diện nhất quán với Admin hiện có. Form hỗ trợ lỗi, loading, keyboard/mobile và phân biệt luồng đăng ký User với đăng nhập. Tích hợp convert Admin trong U07 để cùng kiểm tra khi bật guard Studio. Khi đăng nhập thành công, điều hướng theo phiên backend đã xác thực. Dùng credentials và CSRF đúng hợp đồng, lưu state phiên trong bộ nhớ.
 - **Nghiệm thu** — PASS khi User đăng ký/đăng nhập được và về Gallery hoặc trang hợp lệ đã chọn, Admin về `/admin/packs`, URL quay lại bên ngoài bị từ chối, typecheck/build PASS.
 
-### [ ] U06 — Nút tài khoản và trạng thái phiên trên Gallery
+### [x] U06 — Nút tài khoản và trạng thái phiên trên Gallery
 
 - **Phụ trách** — Antigravity. **Phụ thuộc** — U05.
 - **Phạm vi dự kiến** — App shell/header và trạng thái phiên User.
 - **Yêu cầu** — Nút **Đăng ký / Đăng nhập** dễ thấy ở góc phải trên desktop và trong điều hướng mobile. Khi có phiên User, hiển thị thông tin tài khoản phù hợp và lối đăng xuất. Tải lại trang khôi phục phiên qua API.
 - **Nghiệm thu** — PASS khi khách vào Gallery trực tiếp, nút hoạt động trên desktop/mobile, giao diện đồng bộ sau tải lại và đăng xuất, và tài khoản khác trên cùng trình duyệt không thấy bản phối của phiên trước.
 
-### [ ] U07 — Chặn thao tác frontend và quay lại sau đăng nhập
+### [x] U07 — Chặn thao tác frontend và quay lại sau đăng nhập
 
 - **Phụ trách** — Antigravity. **Phụ thuộc** — U04, U05, U06.
 - **Phạm vi dự kiến** — Route/action guards cho Studio, Sandbox, Download, Mix và Share, cùng việc chuyển RoleAssetEditor sang endpoint convert Admin đã nghiệm thu ở U04.
@@ -268,4 +268,64 @@ CDN/R2 staging chưa kiểm thử. Trước cutover phải chặn raw binary ở
 | Backend Live Test (ca 6 `userAuth.test.ts`) | PASS trực tiếp với FastAPI backend (Argon2id, MySQL session token, cookie và CSRF). |
 | `npm run build` (`tsc && vite build`) | PASS, bundle production sạch trong 22.91s, 0 cảnh báo. |
 
-**Task kế tiếp của Antigravity — U06, Nút tài khoản và trạng thái phiên trên Gallery. Dừng trước U06.**
+**Task kế tiếp của Antigravity — U06, Nút tài khoản và trạng thái phiên trên Gallery.**
+
+
+## Kết quả U06
+
+**2026-11-19 · Antigravity · PASS**
+
+- Primary files: `frontend/src/components/UserNav.tsx`, `frontend/src/components/UserAuthProvider.tsx`, `frontend/src/App.tsx`.
+- Điều hướng tài khoản người dùng ([UserNav.tsx](file:///e:/cursor-studio/frontend/src/components/UserNav.tsx)):
+  - Khách (Guest): Hiển thị nút "Đăng ký" và "Đăng nhập" nổi bật ở góc phải trên desktop header và trong menu drawer mobile. Nút "Đăng nhập" truyền URL hiện tại làm `returnUrl`.
+  - Người dùng đã đăng nhập (Authenticated User): Hiển thị avatar ký tự viết hoa từ email, email người dùng, định danh `#...`, dropdown menu với các liên kết nhanh (Khám phá Gallery, Trình tạo Studio, Bộ sưu tập Mix & Match), huy hiệu Admin trỏ về `/admin/packs` nếu phiên Admin đang hoạt động, và nút "Đăng xuất".
+  - Tải lại trang (Reload): Khôi phục danh tính và phiên qua API `GET /api/v1/auth/me` với cookie HttpOnly tự động.
+  - Đăng xuất (Logout): Gọi `POST /api/v1/auth/logout`, xóa CSRF token trong bộ nhớ, cập nhật context thành unauthenticated, đồng thời gọi `clearLocalMix()` từ `mixStorage.ts` để xóa sạch bản phối tạm local, ngăn người dùng tiếp theo hoặc khách trên máy dùng chung nhìn thấy bản phối cũ.
+- Bọc toàn bộ App Tree ([App.tsx](file:///e:/cursor-studio/frontend/src/App.tsx)):
+  - Đưa `<UserAuthProvider>` và `<AdminAuthProvider>` bọc ngoài toàn bộ layout (bao gồm header, mobile drawer, routes, dock và footer).
+  - Tích hợp `UserNav` vào desktop header và mobile navigation drawer.
+
+| Kiểm tra | Kết quả |
+|---|---|
+| `npm run typecheck` (`tsc --noEmit`) | PASS, 0 errors với strict, exactOptionalPropertyTypes, noUncheckedIndexedAccess. |
+| `npm test` | 79/79 PASS. |
+| `npm run build` | PASS trong 37.34s. |
+
+
+## Kết quả U07
+
+**2026-11-19 · Antigravity · PASS**
+
+- Primary files: `frontend/src/components/UserRoute.tsx`, `frontend/src/lib/adminApi.ts`, `frontend/src/types/admin.ts`, `frontend/src/components/admin/RoleAssetEditor.tsx`, `frontend/src/lib/api.ts`, `frontend/src/App.tsx`, `frontend/src/features/gallery/PackDetailPage.tsx`, `frontend/src/features/gallery/GalleryPage.tsx`, `frontend/src/features/mix/MixPage.tsx`, `frontend/src/features/studio/StudioPage.tsx`, `frontend/src/tests/userGuards.test.ts`.
+- Chuyển đổi Admin Editor sang API convert riêng ([adminApi.ts](file:///e:/cursor-studio/frontend/src/lib/adminApi.ts), [RoleAssetEditor.tsx](file:///e:/cursor-studio/frontend/src/components/admin/RoleAssetEditor.tsx)):
+  - Định nghĩa DTO `AdminConvertCursorParams` và `AdminConvertCursorResult` trong `types/admin.ts`.
+  - Triển khai `adminConvertCursor` gọi trực tiếp `POST /api/v1/admin/tools/convert` với credentials cookie Admin và CSRF token từ bộ nhớ.
+  - Tách hoàn toàn `RoleAssetEditor.tsx` khỏi endpoint convert công khai; tạo file `.cur` thành công ngay cả khi chỉ có phiên Admin và không có tài khoản User.
+- Route Guard & Content Protection ([UserRoute.tsx](file:///e:/cursor-studio/frontend/src/components/UserRoute.tsx), [App.tsx](file:///e:/cursor-studio/frontend/src/App.tsx)):
+  - Route guard `UserRoute` bọc `/studio`, `/mix`, `/mix/:code`. Chống flash nội dung khi đang kiểm tra phiên (`isLoading`), tự động chuyển hướng unauthenticated về `/login?returnUrl=...`.
+- Action Guards tại điểm bắt đầu thao tác:
+  - **Tải ZIP** ([PackDetailPage.tsx](file:///e:/cursor-studio/frontend/src/features/gallery/PackDetailPage.tsx)): Kiểm tra phiên trước khi tải; khách bấm "Download Windows Pack" lập tức chuyển sang `/login?returnUrl=/packs/{slug}`. Xử lý bắt lỗi 401 khi phiên hết hạn.
+  - **Thêm vào Mix** ([PackDetailPage.tsx](file:///e:/cursor-studio/frontend/src/features/gallery/PackDetailPage.tsx)): Khách bấm "Add to Mix" chuyển sang `/login?returnUrl=/packs/{slug}`.
+  - **Interactive Sandbox** ([PackDetailPage.tsx](file:///e:/cursor-studio/frontend/src/features/gallery/PackDetailPage.tsx)): Hiển thị giao diện mờ nhẹ kèm lớp phủ bảo vệ "Thử con trỏ trong Interactive Sandbox" và nút "Đăng nhập để thử trong Sandbox" chuyển hướng về `/login?returnUrl=/packs/{slug}`.
+  - **Try Con trỏ trên Gallery** ([GalleryPage.tsx](file:///e:/cursor-studio/frontend/src/features/gallery/GalleryPage.tsx)): Khách bấm nút "Try" trên PackCard chuyển sang login giữ nguyên query bộ lọc và phân trang.
+  - **Chia sẻ Mix & Nạp Share Code** ([MixPage.tsx](file:///e:/cursor-studio/frontend/src/features/mix/MixPage.tsx)): Chặn tạo share khi chưa đăng nhập; khi mở link `/mix/:code` nếu phiên chưa đăng nhập hoặc 401, hiển thị thông báo thân thiện kèm nút đăng nhập quay lại đúng link chia sẻ.
+  - **Xuất CUR trong Studio** ([StudioPage.tsx](file:///e:/cursor-studio/frontend/src/features/studio/StudioPage.tsx)): Bắt 401 khi xuất file và điều hướng về `/login?returnUrl=/studio`.
+- Cập nhật Typed Client ([api.ts](file:///e:/cursor-studio/frontend/src/lib/api.ts)):
+  - `createRequestInit` luôn gửi `credentials: 'include'` và tự động đính kèm `X-CSRF-Token` từ `getUserCsrfToken()` cho các phương thức mutation (POST/PUT/DELETE).
+- Suite kiểm thử Task U07 ([userGuards.test.ts](file:///e:/cursor-studio/frontend/src/tests/userGuards.test.ts)):
+  - Unit test `adminConvertCursor` gửi multipart FormData, CSRF, credentials và nhận file CUR.
+  - Unit test kiểm tra `api.ts` tự động gắn `credentials: 'include'` và User CSRF token.
+  - Unit test kiểm tra làm sạch URL chuyển hướng của route guard (từ chối URL ngoài, backslash, đường dẫn admin đối với user).
+  - **Live Backend Integration Test**: Đăng nhập Admin qua backend FastAPI thật, gọi `POST /api/v1/admin/tools/convert` với 1x1 PNG, nhận về file nhị phân CUR hợp lệ (magic header `0x00 0x00 0x02 0x00`) trong 635ms!
+
+| Kiểm tra | Kết quả |
+|---|---|
+| `npm run typecheck` (`tsc --noEmit`) | PASS, 0 errors với strict, exactOptionalPropertyTypes, noUncheckedIndexedAccess. |
+| `npm test` (`node --test --experimental-strip-types`) | **80/80 PASS**, 0 fail, 3 skip (2 do chưa có key dev root, 1 do rate limit IP dev). |
+| Backend Live Test (ca 4 `userGuards.test.ts`) | **PASS trực tiếp với FastAPI backend thật** (Admin auth, multipart convert, CUR binary). |
+| `npm run build` (`tsc && vite build`) | PASS, bundle production sạch trong 15.94s, 0 cảnh báo. |
+
+**Frontend Tasks (U05, U06, U07) đã HOÀN TẤT TOÀN BỘ.**
+Task kế tiếp:
+- **U08 — Kiểm thử tương thích và bảo mật backend** (Phụ trách: **Codex**).
+- **U09 — Nghiệm thu xuyên suốt và chuẩn bị phát hành** (Phụ trách: **Antigravity** đầu mối Browser E2E, **Codex** nghiệm thu backend và bảo mật).

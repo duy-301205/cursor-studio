@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import {
   Layers,
   Sparkles,
@@ -11,12 +11,13 @@ import {
   Plus,
   RefreshCw,
   Compass,
-  ArrowRight,
   ShieldCheck,
   Calendar,
   X,
   Loader2,
+  LogIn,
 } from 'lucide-react';
+import { useUserAuth } from '../../components/UserAuthProvider.tsx';
 import {
   useLocalMix,
   ALL_CURSOR_ROLES,
@@ -55,6 +56,8 @@ const ROLE_DISPLAY_NAMES: Record<CursorRole, string> = {
 export const MixPage: React.FC = () => {
   const { code: shareCodeParam } = useParams<{ code?: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { isAuthenticated } = useUserAuth();
 
   // Local mix state hook
   const {
@@ -115,7 +118,12 @@ export const MixPage: React.FC = () => {
         if (!isMounted) return;
         setSharedLoading(false);
         if (err instanceof ApiError) {
-          if (err.status === 404) {
+          if (err.status === 401 || err.code === 'AUTH_REQUIRED') {
+            setSharedError({
+              status: 401,
+              message: 'Yêu cầu đăng nhập để xem và nạp bản phối được chia sẻ này.',
+            });
+          } else if (err.status === 404) {
             setSharedError({
               status: 404,
               message: 'Shared mix not found. The link may be invalid or mistyped.',
@@ -212,6 +220,12 @@ export const MixPage: React.FC = () => {
   const handleShareMix = async () => {
     if (assignedCount === 0 || isSharing) return;
 
+    if (!isAuthenticated) {
+      const returnUrl = encodeURIComponent(location.pathname + location.search);
+      navigate(`/login?returnUrl=${returnUrl}`);
+      return;
+    }
+
     setIsSharing(true);
     setShareError(null);
     setShareSuccess(null);
@@ -240,6 +254,11 @@ export const MixPage: React.FC = () => {
       }
     } catch (err: unknown) {
       if (err instanceof ApiError) {
+        if (err.status === 401 || err.code === 'AUTH_REQUIRED') {
+          const returnUrl = encodeURIComponent(location.pathname + location.search);
+          navigate(`/login?returnUrl=${returnUrl}`);
+          return;
+        }
         setShareError(err.message);
       } else {
         setShareError('Failed to generate share link. Please try again.');
@@ -348,18 +367,32 @@ export const MixPage: React.FC = () => {
           </div>
           <div className="space-y-1">
             <h2 className="text-lg font-bold text-red-800 dark:text-red-200">
-              {sharedError.status === 410 ? 'Preset Expired (HTTP 410)' : 'Preset Not Found (HTTP 404)'}
+              {sharedError.status === 401
+                ? 'Yêu cầu đăng nhập (HTTP 401)'
+                : sharedError.status === 410
+                ? 'Preset Expired (HTTP 410)'
+                : 'Preset Not Found (HTTP 404)'}
             </h2>
             <p className="text-xs sm:text-sm text-red-700 dark:text-red-300 max-w-md mx-auto">
               {sharedError.message}
             </p>
           </div>
-          <Link
-            to="/mix"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand text-white text-xs font-semibold hover:bg-brand-hover transition-colors shadow-sm"
-          >
-            Go to My Mix &amp; Match Draft <ArrowRight className="w-4 h-4" />
-          </Link>
+          {sharedError.status === 401 ? (
+            <Link
+              to={`/login?returnUrl=${encodeURIComponent(location.pathname + location.search)}`}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand text-white text-xs font-semibold hover:bg-brand-hover transition-colors shadow-sm"
+            >
+              <LogIn className="w-4 h-4" />
+              Đăng nhập để xem bản phối
+            </Link>
+          ) : (
+            <Link
+              to="/mix"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand text-white text-xs font-semibold hover:bg-brand-hover transition-colors shadow-sm"
+            >
+              Back to Personal Mix Composer
+            </Link>
+          )}
         </div>
       )}
 

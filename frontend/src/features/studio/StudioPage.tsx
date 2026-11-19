@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Upload,
   Sparkles,
@@ -28,6 +29,7 @@ import { InteractiveSandbox } from '../../components/InteractiveSandbox.tsx';
 import type { CursorAsset, CursorRole } from '../../types/api.ts';
 
 export const StudioPage: React.FC = () => {
+  const navigate = useNavigate();
   // --- Image & Pipeline States ---
   const [sourceFile, setSourceFile] = useState<File | null>(null);
   const [imageMeta, setImageMeta] = useState<{ width: number; height: number; sizeBytes: number } | null>(null);
@@ -265,7 +267,10 @@ export const StudioPage: React.FC = () => {
     } catch (err: unknown) {
       console.error('Failed to export cursor:', err);
       if (err instanceof ApiError) {
-        if (err.status === 413) {
+        if (err.status === 401 || err.code === 'AUTH_REQUIRED') {
+          navigate('/login?returnUrl=%2Fstudio');
+          return;
+        } else if (err.status === 413) {
           setExportError('Payload too large. The image exceeded the 2MB server limit.');
         } else if (err.status === 415) {
           setExportError('Unsupported image format. Please ensure your image is a valid PNG.');

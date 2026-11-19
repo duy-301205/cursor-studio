@@ -13,6 +13,7 @@ import React, {
 } from 'react';
 import { getMeUser, logoutUser, UserApiError } from '../lib/userApi.ts';
 import type { UserView } from '../types/userAuth.ts';
+import { clearLocalMix } from '../features/mix/mixStorage.ts';
 
 export interface UserAuthContextValue {
   user: UserView | null;
@@ -73,6 +74,8 @@ export function UserAuthProvider({ children }: UserAuthProviderProps): React.Rea
       setUser(null);
       setError(null);
       setIsLoading(false);
+      // Guarantee that subsequent users or guests on a shared browser do not inherit previous mix
+      clearLocalMix();
     }
   }, []);
 

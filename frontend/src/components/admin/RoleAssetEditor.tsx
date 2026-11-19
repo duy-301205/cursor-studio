@@ -28,9 +28,9 @@ import type {
 import {
   assignRole,
   uploadAsset,
+  adminConvertCursor,
   AdminApiError,
 } from '../../lib/adminApi.ts';
-import { convertCursor } from '../../lib/api.ts';
 import { HotspotGridPicker, type HotspotPoint } from '../HotspotGridPicker.tsx';
 
 export interface RoleAssetEditorProps {
@@ -236,7 +236,7 @@ export const RoleAssetEditor: React.FC<RoleAssetEditorProps> = ({
         throw new Error('Không tìm thấy ảnh preview');
       }
 
-      const { blob, filename } = await convertCursor({
+      const { blob, filename } = await adminConvertCursor({
         file: fileToConvert,
         size: cursorSize,
         hotspot_x: hotspot.x,
@@ -250,7 +250,7 @@ export const RoleAssetEditor: React.FC<RoleAssetEditorProps> = ({
       setSelectedCurFile(generatedCurFile);
       setSelectedCurAssetId(null);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Lỗi khi tạo CUR tự động từ Studio API.';
+      const msg = err instanceof Error ? err.message : 'Lỗi khi tạo CUR tự động từ Admin Tools API.';
       setErrorMessage(msg);
     } finally {
       setIsSubmitting(false);

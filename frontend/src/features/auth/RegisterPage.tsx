@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect, type FormEvent } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link, useSearchParams } from 'react-router-dom';
 import {
   UserPlus,
   Lock,
@@ -17,13 +17,24 @@ import {
   ShieldCheck,
   CheckCircle2,
 } from 'lucide-react';
-import { registerUser, UserApiError } from '../../lib/userApi.ts';
+import { registerUser, getSafeRedirectUrl, UserApiError } from '../../lib/userApi.ts';
 import { useUserAuth } from '../../components/UserAuthProvider.tsx';
 
 export function RegisterPage(): React.ReactElement {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { isAuthenticated, isLoading: isCheckingAuth } = useUserAuth();
+
+  const state = location.state as { from?: { pathname?: string } | string } | null;
+  const rawTarget =
+    (typeof state?.from === 'string' ? state.from : state?.from?.pathname) ||
+    searchParams.get('returnUrl') ||
+    searchParams.get('return_url') ||
+    searchParams.get('redirect') ||
+    searchParams.get('return_to') ||
+    '/';
+  const safeTarget = getSafeRedirectUrl(rawTarget, '/');
 
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
@@ -88,13 +99,16 @@ export function RegisterPage(): React.ReactElement {
 
     try {
       await registerUser({ email: cleanEmail, password });
-      // Redirect to /login with success message and pre-filled email
-      const state = location.state as { from?: unknown } | null;
-      navigate('/login', {
+      // Redirect to /login with success message, pre-filled email, and preserved returnUrl
+      const targetLoginUrl =
+        safeTarget && safeTarget !== '/'
+          ? `/login?returnUrl=${encodeURIComponent(safeTarget)}`
+          : '/login';
+      navigate(targetLoginUrl, {
         state: {
           registeredEmail: cleanEmail,
           message: 'Đăng ký tài khoản thành công! Vui lòng đăng nhập bằng mật khẩu vừa tạo.',
-          from: state?.from,
+          from: safeTarget,
         },
         replace: true,
       });
@@ -289,7 +303,12 @@ export function RegisterPage(): React.ReactElement {
           <p>
             Đã có tài khoản?{' '}
             <Link
-              to="/login"
+              to={
+                safeTarget && safeTarget !== '/'
+                  ? `/login?returnUrl=${encodeURIComponent(safeTarget)}`
+                  : '/login'
+              }
+              state={{ from: safeTarget }}
               className="font-bold text-brand hover:underline"
             >
               Đăng nhập ngay

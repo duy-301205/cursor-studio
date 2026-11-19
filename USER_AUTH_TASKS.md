@@ -80,7 +80,7 @@ Về file .cur/.ani, đề xuất hướng tải qua ZIP là luồng chính. N�
 | Quyết định | Đề xuất chốt cho bản đầu |
 |---|---|
 | Danh tính | Admin dùng username và endpoint Admin hiện có. User dùng email và endpoint User. Form dùng chung gửi đúng một yêu cầu theo loại định danh, không thử lại sang namespace còn lại. Admin về `/admin/packs`. User về Gallery hoặc route công khai hợp lệ vừa định sử dụng. |
-| Đăng ký | Email ASCII chuẩn hóa theo phần schema, password 15–128 ký tự và tối đa 512 byte UTF-8, dùng Argon2id. Tạo User active và chuyển sang login tường minh. Email trùng trả `409 EMAIL_UNAVAILABLE`. Phản hồi trùng này cho phép suy ra email đã được dùng, nên U01 cần duyệt trade-off trước khi chọn phương án cho production. |
+| Đăng ký | Email ASCII chuẩn hóa theo phần schema, password 8–128 ký tự và tối đa 512 byte UTF-8, dùng Argon2id. Ngưỡng 8 ký tự được chủ dự án xác nhận trong U08. Tạo User active và chuyển sang login tường minh. Email trùng trả `409 EMAIL_UNAVAILABLE`. Phản hồi trùng này cho phép suy ra email đã được dùng, nên U01 cần duyệt trade-off trước khi chọn phương án cho production. |
 | Phạm vi v1 | Bản dev đầu tiên gồm đăng ký, login, logout, refresh nhận lại phiên và bảo vệ tính năng. Hoãn xác minh email, quên mật khẩu và đồng bộ Mix khỏi bản dev đầu. Trước khi mở đăng ký trên Internet, chủ dự án chốt chính sách xác minh quyền sở hữu email và khôi phục tài khoản. |
 | Phiên User | Idle 30 phút, absolute 12 giờ như mặc định Admin đã duyệt. Cookie host-only `__Secure-ccs_user`, `Path=/api/v1`, `HttpOnly`, `Secure`, `SameSite=Lax`. HTTP local chỉ khi bật rõ và dùng loopback, cookie tên riêng. Login xoay token, logout thu hồi phiên hiện tại. Không làm mới absolute TTL qua `me`. |
 | Quyền | User được dùng tính năng công khai đã khóa. Phiên Admin tiếp tục phục vụ Admin API, gồm endpoint convert Admin mới. Chỉ có phiên Admin thì các tính năng User yêu cầu phiên User. Hai phiên độc lập nếu cùng tồn tại, logout chỉ kết thúc phiên tương ứng. |
@@ -167,12 +167,14 @@ POST /auth/logout    Cookie User + X-CSRF-Token
 - **Yêu cầu** — Áp bảng quyền tại vị trí người dùng bắt đầu thao tác. Xử lý mở URL trực tiếp, session hết hạn, quay lại bằng đường dẫn nội bộ hợp lệ và giữ Gallery khả dụng cho khách.
 - **Nghiệm thu** — PASS khi khách bấm từng thao tác được bảo vệ hoặc mở URL trực tiếp đều được đưa vào đúng luồng login. Đăng nhập xong quay về đúng chỗ và có thể tự tiếp tục thao tác. Editor Admin tạo được CUR khi chỉ có phiên Admin.
 
-### [ ] U08 — Kiểm thử tương thích và bảo mật backend
+### [x] U08 — Kiểm thử tương thích và bảo mật backend
 
 - **Phụ trách** — Codex. **Phụ thuộc** — U04.
 - **Phạm vi dự kiến** — MySQL/API integration tests, hồi quy catalog, Storage, Share và Admin.
 - **Yêu cầu** — Kiểm phân quyền chéo, cookie/CSRF, session expiry/revoke, đăng ký trùng, trả lỗi chung, rate limit và tải file trực tiếp. Cập nhật test hợp đồng công khai theo quyết định U01. Kiểm POST race khi đăng ký trùng, throttle giữa worker, ZIP counter không tăng khi bị từ chối, share 401/404/410, 15 slot INF và convert Admin.
 - **Nghiệm thu** — PASS khi suite hiện có và suite mới đạt trên MySQL cô lập. Các thay đổi hành vi công khai đều có test và phù hợp hợp đồng đã duyệt.
+
+- **Kết quả 2026-11-19** — 85 PASS, 0 skip trên MySQL 8.0.46 cô lập, gồm 79 ca hồi quy và 6 ca U08. Kiểm ngưỡng mật khẩu 7/8 ký tự, đăng ký trùng đồng thời, cookie/CSRF, phiên hết hạn và thu hồi, giới hạn đăng nhập chung giữa worker, phân quyền User/Admin, tải file trực tiếp và URL legacy, ZIP 15 slot và counter, Share 401/404/410. Ruff, Ruff Format, mypy và Alembic head đều đạt. Bước tiếp theo là U09.
 
 ### [ ] U09 — Nghiệm thu xuyên suốt và chuẩn bị phát hành
 
@@ -180,6 +182,15 @@ POST /auth/logout    Cookie User + X-CSRF-Token
 - **Phạm vi dự kiến** — Browser E2E, bằng chứng staging và hướng dẫn triển khai/rollback.
 - **Yêu cầu** — Chạy luồng khách → Gallery → bấm tải → đăng ký/đăng nhập → quay lại → tải ZIP. Thử Studio, Mix & Match và share link. Kiểm đăng xuất, refresh, phiên hết hạn, Admin đăng nhập chung chuyển đúng trang và User bị từ chối ở Admin.
 - **Nghiệm thu** — PASS khi luồng desktop/mobile và staging đạt, quyền tải trực tiếp và cache CDN đã kiểm tra, hồi quy Admin/A15 đã được đối chiếu, và chủ dự án duyệt trước khi đưa bản mở rộng lên production.
+
+- **Kết quả kiểm lại 2026-11-19** — Liên kết “Đăng ký ngay” trong form đăng nhập giữ đúng pack và query trên Chrome desktop/mobile. Liên kết Đăng ký ở thanh điều hướng vẫn làm mất đích khi người dùng đang ở trang đăng nhập. U09 còn mở, chờ sửa nhánh này, nghiệm thu staging HTTPS/CDN/R2, đối chiếu đầy đủ A15 và phê duyệt phát hành. Chi tiết trong `PROGRESS.md`, mục 3.4.
+
+#### Checklist triển khai và rollback U09
+
+1. **Chuẩn bị bản phát hành.** Xác nhận bản build cho phép User và Admin hoạt động trong môi trường mục tiêu qua HTTPS. Hiện cả hai cấu hình auth giới hạn ở `development`, nên bản hiện tại chỉ dùng được để nghiệm thu local. Đối chiếu A15 và chốt các điều kiện U01 về xác minh email, khôi phục tài khoản trước khi mở đăng ký Internet.
+2. **Nghiệm thu ở staging.** Chụp mốc image/frontend và backup MySQL, sau đó chạy `alembic upgrade head` và xác nhận revision `0003_user_auth`. Cấu hình origin HTTPS đúng với trình duyệt, giữ Host qua reverse proxy tin cậy, cấp khoá CSRF riêng cho User và Admin. Chạy luồng U09 trên desktop/mobile cùng hồi quy Admin, kiểm cookie Secure/HttpOnly, ZIP, Share cũ và quyền tải CUR/ANI.
+3. **Xác minh cache trước khi chuyển đổi.** Đối chiếu phản hồi origin và CDN cho truy cập khách và phiên User. Preview vẫn công khai. ZIP, file tải riêng và Share phải có chính sách no-store. Xác nhận CDN và bucket ngừng phục vụ link binary cũ, rồi purge cache đã lưu của các URL đó và Share. Ghi bằng chứng sau purge và lấy phê duyệt phát hành trước khi bật guard cùng frontend tương thích.
+4. **Rollback ứng dụng và proxy.** Khôi phục bộ image/frontend/proxy tương thích từ mốc ghi ở bước 2 và giữ migration additive cùng dữ liệu User. Giữ chính sách cache và khóa tải/Share. Nếu rollback cần mở lại endpoint công khai, lấy phê duyệt riêng của chủ dự án trước khi thực hiện. Chạy lại smoke Gallery, phiên User, phiên Admin, ZIP, Share và URL binary cũ sau rollback.
 
 
 ## Kết quả U02
@@ -255,7 +266,7 @@ CDN/R2 staging chưa kiểm thử. Trước cutover phải chặn raw binary ở
   - Chống double-submit, loading spinner, bàn phím và responsive mobile 375px/768px/1440px.
   - Giữ nguyên lối vào riêng `/admin/login` cho Quản trị viên.
 - Trang Đăng Ký Người Dùng ([RegisterPage.tsx](file:///e:/cursor-studio/frontend/src/features/auth/RegisterPage.tsx)):
-  - Form đăng ký User với email và mật khẩu (ràng buộc 15–128 ký tự chuẩn Argon2id).
+  - Form đăng ký User với email và mật khẩu (ràng buộc 8–128 ký tự).
   - Đăng ký thành công trả về 201, tự động chuyển sang `/login` kèm thông báo thành công và điền sẵn email theo đúng hợp đồng.
   - Báo lỗi email trùng `409 EMAIL_UNAVAILABLE` và lỗi validation `422`.
 - Unit & Live Integration Tests ([userAuth.test.ts](file:///e:/cursor-studio/frontend/src/tests/userAuth.test.ts)):
@@ -326,6 +337,28 @@ CDN/R2 staging chưa kiểm thử. Trước cutover phải chặn raw binary ở
 | `npm run build` (`tsc && vite build`) | PASS, bundle production sạch trong 15.94s, 0 cảnh báo. |
 
 **Frontend Tasks (U05, U06, U07) đã HOÀN TẤT TOÀN BỘ.**
+
+### Cập nhật bổ sung U07 / U09 — Sửa lỗi điều hướng sau đăng nhập về trang Pack Detail
+
+**2026-11-19 · Antigravity · PASS**
+
+- **Triệu chứng lỗi**: Khi người dùng ở trang chi tiết pack `/packs/:slug` bấm "Tải ZIP", "Thử trong Sandbox" hoặc bấm nút "Đăng nhập" trên thanh điều hướng, sau khi đăng nhập thành công hệ thống lại chuyển về Gallery (`/`) thay vì quay lại trang chi tiết pack đang xem.
+- **Nguyên nhân cốt lõi**:
+  1. `LoginPage.tsx` chỉ tìm `searchParams.get('redirect')` và `searchParams.get('return_to')`, trong khi các guard trong toàn bộ ứng dụng (`PackDetailPage.tsx`, `UserRoute.tsx`, `GalleryPage.tsx`, `MixPage.tsx`) đều truyền query parameter chuẩn `returnUrl`. Do đó `rawTarget` bị gán nhầm thành `'/'`.
+  2. Nút "Đăng ký" và "Đăng nhập" ở desktop header và mobile drawer trong `UserNav.tsx` chưa đính kèm `?returnUrl=...` khi người dùng đang ở trang pack hoặc các route nội bộ.
+  3. `RegisterPage.tsx` chưa đọc và chuyển tiếp `returnUrl` sang `LoginPage.tsx` khi đăng ký hoàn tất hoặc khi bấm "Đã có tài khoản? Đăng nhập ngay".
+- **Các file đã sửa**:
+  - `frontend/src/features/auth/LoginPage.tsx`: Bổ sung kiểm tra `searchParams.get('returnUrl')` và `searchParams.get('return_url')`; chuyển tiếp `safeUserDestination` sang nút "Đăng ký ngay".
+  - `frontend/src/features/auth/RegisterPage.tsx`: Nhận diện `returnUrl` từ search params và location state; chuyển tiếp an toàn qua `getSafeRedirectUrl` sang `LoginPage` khi đăng ký 201 thành công hoặc bấm chuyển form.
+  - `frontend/src/components/UserNav.tsx`:
+    - Khi ở trang thông thường: tự động gán `returnUrl = currentPath`.
+    - Khi đang ở chính trang xác thực (`/login`, `/register`, `/admin/login`): trích xuất và bảo lưu toàn bộ `returnUrl` hiện có trong search params hoặc state, đảm bảo khi người dùng đang ở `/login?returnUrl=...` bấm "Đăng ký" trên Header/Drawer (hoặc ngược lại) không bị rơi rụng `returnUrl`.
+  - `frontend/src/tests/userGuards.test.ts`: Bổ sung Test case 5 bao phủ toàn diện trích xuất `returnUrl`, giữ nguyên URL pack detail, chặn đứng open redirect và kiểm thử chuyển đổi giữa `/login` và `/register` mà không mất `returnUrl`.
+- **Kết quả kiểm thử**:
+  - `npm run typecheck`: PASS, 0 errors.
+  - `npm test`: **82/82 PASS**, 0 fail.
+  - `npm run build`: PASS (Vite production build trong 50.82s).
+
 Task kế tiếp:
 - **U08 — Kiểm thử tương thích và bảo mật backend** (Phụ trách: **Codex**).
 - **U09 — Nghiệm thu xuyên suốt và chuẩn bị phát hành** (Phụ trách: **Antigravity** đầu mối Browser E2E, **Codex** nghiệm thu backend và bảo mật).

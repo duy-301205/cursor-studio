@@ -57,6 +57,8 @@ export function LoginPage(): React.ReactElement {
   const state = location.state as { from?: { pathname?: string } | string } | null;
   const rawTarget =
     (typeof state?.from === 'string' ? state.from : state?.from?.pathname) ||
+    searchParams.get('returnUrl') ||
+    searchParams.get('return_url') ||
     searchParams.get('redirect') ||
     searchParams.get('return_to') ||
     '/';
@@ -281,8 +283,12 @@ export function LoginPage(): React.ReactElement {
           <p>
             Chưa có tài khoản Người dùng?{' '}
             <Link
-              to="/register"
-              state={{ from: rawTarget }}
+              to={
+                safeUserDestination && safeUserDestination !== '/'
+                  ? `/register?returnUrl=${encodeURIComponent(safeUserDestination)}`
+                  : '/register'
+              }
+              state={{ from: safeUserDestination }}
               className="font-bold text-brand hover:underline"
             >
               Đăng ký ngay

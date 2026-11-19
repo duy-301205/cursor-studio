@@ -280,3 +280,128 @@ test('4. Live Backend Integration: Admin session can convert CUR via /admin/tool
     },
   });
 });
+
+// 5. Post-login returnUrl extraction & destination sanitization
+test('5. Post-login returnUrl extraction preserves pack detail URL and rejects open redirects', () => {
+  function resolveDestination(
+    stateFrom: string | { pathname?: string } | undefined,
+    searchParams: Record<string, string>
+  ): string {
+    const rawTarget =
+      (typeof stateFrom === 'string' ? stateFrom : stateFrom?.pathname) ||
+      searchParams['returnUrl'] ||
+      searchParams['return_url'] ||
+      searchParams['redirect'] ||
+      searchParams['return_to'] ||
+      '/';
+    return getSafeRedirectUrl(rawTarget, '/');
+  }
+
+  // Pack detail scenarios
+  assert.equal(
+    resolveDestination(undefined, { returnUrl: '/packs/cyberpunk-neon' }),
+    '/packs/cyberpunk-neon'
+  );
+  assert.equal(
+    resolveDestination(undefined, { return_url: '/packs/minimal-classic' }),
+    '/packs/minimal-classic'
+  );
+  assert.equal(
+    resolveDestination(undefined, { redirect: '/packs/retro-pixel?theme=dark' }),
+    '/packs/retro-pixel?theme=dark'
+  );
+  assert.equal(
+    resolveDestination('/packs/fantasy-rpg', {}),
+    '/packs/fantasy-rpg'
+  );
+
+  // Fallback scenarios (admin, external, javascript, empty)
+  assert.equal(resolveDestination(undefined, {}), '/');
+  assert.equal(resolveDestination(undefined, { returnUrl: '/admin/packs' }), '/');
+  assert.equal(resolveDestination(undefined, { returnUrl: 'https://attacker.com/steal' }), '/');
+  assert.equal(resolveDestination(undefined, { returnUrl: '//evil.com/fake' }), '/');
+
+  // Header/Drawer Nav URL builder validation:
+  // Must preserve returnUrl even when transitioning between /login and /register
+  function computeNavUrls(
+    pathname: string,
+    search: string = '',
+    stateFrom?: string
+  ) {
+    let targetReturnUrl: string | null = null;
+
+    if (
+      pathname === '/login' ||
+      pathname === '/register' ||
+      pathname === '/admin/login'
+    ) {
+      const searchParams = new URLSearchParams(search);
+      const existing =
+        searchParams.get('returnUrl') ||
+        searchParams.get('return_url') ||
+        searchParams.get('redirect') ||
+        searchParams.get('return_to') ||
+        stateFrom;
+      if (existing) {
+        const safe = getSafeRedirectUrl(existing, '/');
+        if (safe !== '/') {
+          targetReturnUrl = safe;
+        }
+      }
+    } else {
+      const currentPath = pathname + search;
+      const safe = getSafeRedirectUrl(currentPath, '/');
+      if (safe !== '/') {
+        targetReturnUrl = safe;
+      }
+    }
+
+    return {
+      loginUrl: targetReturnUrl
+        ? `/login?returnUrl=${encodeURIComponent(targetReturnUrl)}`
+        : '/login',
+      registerUrl: targetReturnUrl
+        ? `/register?returnUrl=${encodeURIComponent(targetReturnUrl)}`
+        : '/register',
+    };
+  }
+
+  // On pack detail page
+  const packNav = computeNavUrls('/packs/minimal-classic');
+  assert.equal(packNav.loginUrl, '/login?returnUrl=%2Fpacks%2Fminimal-classic');
+  assert.equal(packNav.registerUrl, '/register?returnUrl=%2Fpacks%2Fminimal-classic');
+
+  // On gallery home page
+  const homeNav = computeNavUrls('/');
+  assert.equal(homeNav.loginUrl, '/login');
+  assert.equal(homeNav.registerUrl, '/register');
+
+  // On auth page WITHOUT returnUrl
+  const authNav = computeNavUrls('/login');
+  assert.equal(authNav.loginUrl, '/login');
+  assert.equal(authNav.registerUrl, '/register');
+
+  // CRITICAL: On /login WITH returnUrl -> Clicking "Đăng ký" must preserve returnUrl!
+  const loginWithReturnNav = computeNavUrls('/login', '?returnUrl=%2Fpacks%2Fminimal-classic');
+  assert.equal(
+    loginWithReturnNav.registerUrl,
+    '/register?returnUrl=%2Fpacks%2Fminimal-classic',
+    'Register link on /login must retain returnUrl to pack detail'
+  );
+  assert.equal(
+    loginWithReturnNav.loginUrl,
+    '/login?returnUrl=%2Fpacks%2Fminimal-classic'
+  );
+
+  // CRITICAL: On /register WITH returnUrl -> Clicking "Đăng nhập" must preserve returnUrl!
+  const registerWithReturnNav = computeNavUrls('/register', '?returnUrl=%2Fpacks%2Fminimal-classic');
+  assert.equal(
+    registerWithReturnNav.loginUrl,
+    '/login?returnUrl=%2Fpacks%2Fminimal-classic',
+    'Login link on /register must retain returnUrl to pack detail'
+  );
+  assert.equal(
+    registerWithReturnNav.registerUrl,
+    '/register?returnUrl=%2Fpacks%2Fminimal-classic'
+  );
+});

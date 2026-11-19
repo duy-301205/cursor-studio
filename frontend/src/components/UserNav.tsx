@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   LogIn,
   LogOut,
@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useUserAuth } from './UserAuthProvider.tsx';
 import { useAdminAuth } from './admin/AdminRoute.tsx';
+import { getSafeRedirectUrl } from '../lib/userApi.ts';
 
 export interface UserNavProps {
   isMobile?: boolean | undefined;
@@ -26,8 +27,49 @@ export interface UserNavProps {
 
 export function UserNav({ isMobile = false, onNavigate }: UserNavProps): React.ReactElement {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, isAuthenticated, isLoading: isUserLoading, logout } = useUserAuth();
   const { admin, isAuthenticated: isAdmin, isLoading: isAdminLoading } = useAdminAuth();
+
+  // Determine target return URL for guest login/register navigation links:
+  // 1. If currently on an auth page, preserve the existing return target from search params or state
+  // 2. If currently on any regular internal page (and not '/'), the return target is the current path
+  let targetReturnUrl: string | null = null;
+
+  if (
+    location.pathname === '/login' ||
+    location.pathname === '/register' ||
+    location.pathname === '/admin/login'
+  ) {
+    const searchParams = new URLSearchParams(location.search);
+    const state = location.state as { from?: { pathname?: string } | string } | null;
+    const stateFrom = typeof state?.from === 'string' ? state.from : state?.from?.pathname;
+    const existing =
+      searchParams.get('returnUrl') ||
+      searchParams.get('return_url') ||
+      searchParams.get('redirect') ||
+      searchParams.get('return_to') ||
+      stateFrom;
+    if (existing) {
+      const safe = getSafeRedirectUrl(existing, '/');
+      if (safe !== '/') {
+        targetReturnUrl = safe;
+      }
+    }
+  } else {
+    const currentPath = location.pathname + location.search;
+    const safe = getSafeRedirectUrl(currentPath, '/');
+    if (safe !== '/') {
+      targetReturnUrl = safe;
+    }
+  }
+
+  const loginUrl = targetReturnUrl
+    ? `/login?returnUrl=${encodeURIComponent(targetReturnUrl)}`
+    : '/login';
+  const registerUrl = targetReturnUrl
+    ? `/register?returnUrl=${encodeURIComponent(targetReturnUrl)}`
+    : '/register';
 
   const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
   const [isLoggingOut, setIsLoggingOut] = useState<boolean>(false);
@@ -133,7 +175,8 @@ export function UserNav({ isMobile = false, onNavigate }: UserNavProps): React.R
     return (
       <div className="pt-4 mt-2 border-t border-line grid grid-cols-2 gap-2">
         <Link
-          to="/login"
+          to={loginUrl}
+          state={targetReturnUrl ? { from: targetReturnUrl } : undefined}
           onClick={onNavigate}
           className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-raised hover:bg-surface border border-line text-ink text-sm font-semibold transition-colors"
         >
@@ -141,7 +184,8 @@ export function UserNav({ isMobile = false, onNavigate }: UserNavProps): React.R
           <span>Đăng nhập</span>
         </Link>
         <Link
-          to="/register"
+          to={registerUrl}
+          state={targetReturnUrl ? { from: targetReturnUrl } : undefined}
           onClick={onNavigate}
           className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-brand hover:bg-brand-hover text-white text-sm font-semibold shadow-sm transition-all"
         >
@@ -269,13 +313,15 @@ export function UserNav({ isMobile = false, onNavigate }: UserNavProps): React.R
   return (
     <div className="flex items-center gap-1.5 sm:gap-2">
       <Link
-        to="/login"
+        to={loginUrl}
+        state={targetReturnUrl ? { from: targetReturnUrl } : undefined}
         className="px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold text-ink hover:bg-raised transition-colors"
       >
         Đăng nhập
       </Link>
       <Link
-        to="/register"
+        to={registerUrl}
+        state={targetReturnUrl ? { from: targetReturnUrl } : undefined}
         className="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-brand hover:bg-brand-hover text-white shadow-sm transition-all active:scale-95"
       >
         Đăng ký

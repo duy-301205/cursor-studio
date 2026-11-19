@@ -1,9 +1,11 @@
 # PROGRESS.md — Project State Tracker, Decisions & Debugging Log
 
 > **Project:** Custom Cursor Studio & Library | **Tracking schema:** v1.0  
-> **Last updated:** 2026-11-18 | **Status:** IN_PROGRESS
+> **Last updated:** 2026-11-19 | **Status:** IN_PROGRESS
 >
 > **Current phase:** P4 — Production / QA | **Next task:** T23
+>
+> **User Auth:** U08 PASS | U09 chưa đạt cổng phát hành. Checklist mở rộng nằm trong `USER_AUTH_TASKS.md`.
 >
 > **Important:** Trạng thái bên dưới là template ban đầu; **không** có task kỹ thuật nào được đánh dấu PASS trước khi Agent thực sự chạy code/test.
 
@@ -743,6 +745,24 @@ next_task: T02
 | 2026-11-17 | Codex | T15 | Suite hợp đồng 7 API trên app.main và MySQL tạm. Docker Compose, 70 pytest, Ruff, mypy và OpenAPI PASS. | `backend/tests/conftest.py`, `backend/tests/test_api_integration.py`, `TASKS.md`, `PROGRESS.md` | PASS | — | T16 |
 
 **Append rule:** không sửa lịch sử kết quả cũ thành PASS; nếu retry, thêm dòng mới với cause/fix. Link logs phải được sanitize secrets.
+
+### 3.3 Kiểm thử User Auth — U08
+
+- Chủ dự án xác nhận mật khẩu đăng ký tối thiểu 8 ký tự. Đồng bộ tài liệu U01 và test biên 7/8 ký tự theo quyết định này.
+- Lượt đầu thiếu URL placeholder Admin và cấu hình proxy loopback cho các worker User. Lượt sau đạt 84/85 vì bản sao static có 17 file Peach Bloom ngoài 34 file seed chuẩn. Tách pack bổ sung khỏi bản sao kiểm thử và xác nhận lại số file.
+- Lượt cuối ngày 2026-11-19 đạt **85 PASS, 0 skip** với `python -m pytest -q -p no:cacheprovider tests` trên MySQL 8.0.46 cô lập. Hai worker chạy cấu hình cũ cho hồi quy và hai worker bật User guard cho U08. `alembic upgrade head` đạt revision `0003_user_auth`. Ruff check, Ruff format check, mypy và Docker Compose config đều đạt.
+- File thay đổi gồm `backend/tests/test_user_auth_integration.py`, `USER_AUTH_TASKS.md` và `PROGRESS.md`. Bước tiếp theo là U09, nghiệm thu xuyên suốt và chuẩn bị phát hành.
+
+### 3.4 Nghiệm thu User Auth — U09
+
+- **2026-11-19 · Codex · BLOCKED.** Tài liệu `USER_AUTH_TASKS.md` có checklist triển khai và rollback. Cổng production vẫn chờ staging HTTPS/CDN/R2, A15, chính sách xác minh/khôi phục tài khoản và phê duyệt phát hành.
+- Chrome trên MySQL cô lập với User guard bật tái hiện lỗi quay về Gallery ở viewport 390 và 1440 px sau khi bấm tải, đăng ký và đăng nhập. `PackDetailPage.tsx` gửi `returnUrl`, trong khi `LoginPage.tsx` đọc `redirect` hoặc `return_to` và mất đích khi chuyển sang đăng ký. Hạng mục sửa và nghiệm thu lại thuộc frontend.
+- Desktop đạt các bước mở lại pack thủ công, khôi phục phiên sau refresh, tải ZIP hợp lệ, upload Studio và xuất CUR, tạo và mở Share từ Mix, User bị chặn ở Admin, logout thu hồi phiên và đăng nhập Admin từ form chung. Hai ca hết hạn phiên ở U08 đạt qua API. Lượt browser mobile dừng ở luồng quay lại, nên chưa có nghiệm thu mobile đầy đủ.
+- Origin local trả 401 và no-store cho CUR được bảo vệ và Share của khách, 404 và no-store cho CUR static cũ, 200 cho preview PNG. Kết quả này chưa xác minh được hành vi cache ở CDN thật. Stack test tạm đã được dọn.
+- Backend User/Admin auth hiện yêu cầu `app_env=development`, kể cả khi bật cờ tương ứng. Bản cấu hình production hiện chưa thể dùng để nghiệm thu hai phân hệ auth.
+- `npm test` có 80 PASS và 3 skip live. Hai ca Admin bị từ chối origin khi gọi trực tiếp từ Node và một ca User bị rate limit trên dev. `npm run build` PASS. Hồi quy backend U08 có 85 PASS, gồm hợp đồng tải trực tiếp và phân quyền User/Admin.
+- `docker compose -f docker-compose.dev.yml build backend` PASS. Image `custom-cursor-dev-backend:latest` có ID `sha256:92d978b3f4d5e62c3a80d29e003fbd60aaf6865828669de4b7d95c7a00fda20b` và qua `python -m pip check`. Backend dev đang chạy trả `{"status":"ready"}`. Lượt build chỉ cập nhật image.
+- **Kiểm lại sau bản vá frontend.** Chrome 390 và 1440 px trên MySQL cô lập, User guard bật, đạt luồng bấm tải → “Đăng ký ngay” trong form → đăng ký → đăng nhập → đúng pack và query → refresh → tải ZIP. Typecheck đạt và 11/11 ca Auth/Guard đạt. Nhánh Đăng ký ở thanh điều hướng vẫn tạo URL `/register` không có `returnUrl` khi đang ở `/login`; lượt kiểm nhánh này quay về Gallery sau đăng nhập.
 
 ## 4. Current Sprint Checklist
 

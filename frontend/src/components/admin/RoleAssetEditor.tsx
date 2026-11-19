@@ -1,4 +1,5 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   MousePointer,
   Link2,
@@ -126,6 +127,22 @@ export const RoleAssetEditor: React.FC<RoleAssetEditorProps> = ({
 
   const previewFileInputRef = useRef<HTMLInputElement>(null);
   const curFileInputRef = useRef<HTMLInputElement>(null);
+  const isModalOpen = activeRole !== null;
+
+  useEffect(() => {
+    if (!isModalOpen) return;
+    const page = document.documentElement;
+    const previousOverflow = page.style.overflow;
+    page.style.overflow = 'hidden';
+    return () => {
+      page.style.overflow = previousOverflow;
+    };
+  }, [isModalOpen]);
+
+  useEffect(() => {
+    if (!previewDataUrl?.startsWith('blob:')) return;
+    return () => URL.revokeObjectURL(previewDataUrl);
+  }, [previewDataUrl]);
 
   // Map roles by type for fast lookup
   const roleMap = new Map<CursorRole, AdminPackRole>();
@@ -153,11 +170,14 @@ export const RoleAssetEditor: React.FC<RoleAssetEditorProps> = ({
       setSelectedCurAssetId(existing.asset_id);
       setHotspot({ x: existing.hotspot_x, y: existing.hotspot_y });
       setPreviewDataUrl(existing.preview_url || null);
+      const width = assets.find((asset) => asset.asset_id === existing.preview_asset_id)?.width;
+      setCursorSize(width === 48 ? 48 : 32);
     } else {
       setSelectedPreviewAssetId(null);
       setSelectedCurAssetId(null);
       setHotspot({ x: 0, y: 0 });
       setPreviewDataUrl(null);
+      setCursorSize(32);
     }
   };
 
@@ -172,9 +192,15 @@ export const RoleAssetEditor: React.FC<RoleAssetEditorProps> = ({
     setConflictOccurred(false);
   };
 
-  const handlePreviewFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePreviewFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    e.target.value = '';
+    setSelectedPreviewFile(null);
+    setSelectedPreviewAssetId(null);
+    setPreviewDataUrl(null);
+    setSelectedCurFile(null);
+    setSelectedCurAssetId(null);
 
     if (file.type !== 'image/png') {
       setErrorMessage('Preview role bắt buộc phải là ảnh định dạng PNG (32×32 hoặc 48×48).');
@@ -186,16 +212,24 @@ export const RoleAssetEditor: React.FC<RoleAssetEditorProps> = ({
     }
 
     setErrorMessage(null);
-    setSelectedPreviewFile(file);
-    setSelectedPreviewAssetId(null);
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        setPreviewDataUrl(reader.result);
+    setIsSubmitting(true);
+    try {
+      const bitmap = await createImageBitmap(file);
+      const { width, height } = bitmap;
+      bitmap.close();
+      if (width !== height || (width !== 32 && width !== 48)) {
+        setErrorMessage(`Ảnh preview hiện là ${width}×${height} px. Hãy chọn PNG 32×32 hoặc 48×48 px.`);
+        return;
       }
-    };
-    reader.readAsDataURL(file);
+      setCursorSize(width);
+      setHotspot({ x: 0, y: 0 });
+      setSelectedPreviewFile(file);
+      setPreviewDataUrl(URL.createObjectURL(file));
+    } catch {
+      setErrorMessage('Không đọc được ảnh PNG. Hãy xuất lại ảnh và thử lại.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleCurFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -261,6 +295,11 @@ export const RoleAssetEditor: React.FC<RoleAssetEditorProps> = ({
     if (!activeRole) return;
     if (!etag) {
       setErrorMessage('Không có ETag revision của pack. Vui lòng tải lại bản nháp.');
+      return;
+    }
+    if ((!selectedPreviewFile && !selectedPreviewAssetId) ||
+        (!selectedCurFile && !selectedCurAssetId)) {
+      setErrorMessage('Hãy chọn ảnh preview và tạo hoặc tải file .cur trước khi lưu.');
       return;
     }
 
@@ -483,9 +522,14 @@ export const RoleAssetEditor: React.FC<RoleAssetEditorProps> = ({
       </div>
 
       {/* Role Assignment Modal */}
-      {activeRole && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
-          <div className="relative w-full max-w-2xl bg-surface border border-line rounded-2xl shadow-2xl p-6 space-y-6 my-8">
+      {activeRole && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="role-asset-dialog-title"
+            className="relative w-full max-w-2xl max-h-full overflow-y-auto overscroll-contain bg-surface border border-line rounded-2xl shadow-2xl p-6 space-y-6"
+          >
             {/* Modal Header */}
             <div className="flex items-start justify-between gap-4 border-b border-line pb-4">
               <div className="flex items-center gap-3">
@@ -493,7 +537,7 @@ export const RoleAssetEditor: React.FC<RoleAssetEditorProps> = ({
                   {React.createElement(ROLE_METADATA[activeRole].icon, { className: 'w-5 h-5' })}
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-ink">
+                  <h3 id="role-asset-dialog-title" className="text-lg font-bold text-ink">
                     Gán Asset cho role: {ROLE_METADATA[activeRole].label}
                   </h3>
                   <p className="text-xs text-muted">
@@ -587,9 +631,12 @@ export const RoleAssetEditor: React.FC<RoleAssetEditorProps> = ({
                           setSelectedPreviewAssetId(assetId || null);
                           setSelectedPreviewFile(null);
                           const found = assets.find((a) => a.asset_id === assetId);
-                          if (found?.content_url) {
-                            setPreviewDataUrl(found.content_url);
-                          }
+                          setPreviewDataUrl(found?.content_url || null);
+                          setSelectedCurFile(null);
+                          setSelectedCurAssetId(null);
+                          setCursorSize(found?.width === 48 ? 48 : 32);
+                          setHotspot({ x: 0, y: 0 });
+                          setErrorMessage(null);
                         }}
                         disabled={isSubmitting}
                         className="px-3 py-1.5 rounded-lg bg-surface text-xs font-medium text-ink border border-line focus:outline-none focus:ring-1 focus:ring-brand"
@@ -633,7 +680,7 @@ export const RoleAssetEditor: React.FC<RoleAssetEditorProps> = ({
                   x={hotspot.x}
                   y={hotspot.y}
                   onChange={(point) => setHotspot(point)}
-                  onSizeChange={(newSize) => setCursorSize(newSize)}
+                  onSizeChange={previewDataUrl ? undefined : setCursorSize}
                   disabled={isSubmitting}
                 />
 
@@ -717,7 +764,8 @@ export const RoleAssetEditor: React.FC<RoleAssetEditorProps> = ({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

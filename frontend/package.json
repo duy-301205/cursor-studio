@@ -8,7 +8,7 @@
     "build": "tsc && vite build",
     "typecheck": "tsc --noEmit",
     "preview": "vite preview",
-    "test": "node --test --experimental-strip-types src/tests/api.test.ts src/tests/hotspot.test.ts src/tests/studio.test.ts src/tests/mix.test.ts src/tests/adminApi.test.ts src/tests/adminAuth.test.ts src/tests/adminPacks.test.ts src/tests/adminEditor.test.ts src/tests/adminPublish.test.ts"
+    "test": "node --test --experimental-strip-types src/tests/api.test.ts src/tests/hotspot.test.ts src/tests/studio.test.ts src/tests/mix.test.ts src/tests/adminApi.test.ts src/tests/adminAuth.test.ts src/tests/adminPacks.test.ts src/tests/adminEditor.test.ts src/tests/adminPublish.test.ts src/tests/userAuth.test.ts"
   },
   "dependencies": {
     "@imgly/background-removal": "^1.7.0",

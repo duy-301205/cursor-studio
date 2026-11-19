@@ -24,6 +24,9 @@ import { AdminAuthProvider, AdminRoute } from './components/admin/AdminRoute.tsx
 import { AdminLoginPage } from './features/admin/AdminLoginPage.tsx';
 import { AdminPacksPage } from './features/admin/AdminPacksPage.tsx';
 import { AdminPackEditorPage } from './features/admin/AdminPackEditorPage.tsx';
+import { UserAuthProvider } from './components/UserAuthProvider.tsx';
+import { LoginPage } from './features/auth/LoginPage.tsx';
+import { RegisterPage } from './features/auth/RegisterPage.tsx';
 
 type Theme = 'light' | 'dark';
 
@@ -236,52 +239,58 @@ export default function App(): React.ReactElement {
       {/* ============================================================ */}
       {/* 2. Main Layout & Structured Route Placeholders               */}
       {/* ============================================================ */}
-      <AdminAuthProvider>
-        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-          <Routes>
-            <Route path="/" element={<GalleryPage />} />
-            <Route path="/packs" element={<GalleryPage />} />
-            <Route path="/packs/:slug" element={<PackDetailPage />} />
-            <Route path="/pack/:slug" element={<PackDetailPage />} />
-            <Route path="/studio" element={<StudioPage />} />
-            <Route path="/mix" element={<MixPage />} />
-            <Route path="/mix/:code" element={<MixPage />} />
+      <UserAuthProvider>
+        <AdminAuthProvider>
+          <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+            <Routes>
+              <Route path="/" element={<GalleryPage />} />
+              <Route path="/packs" element={<GalleryPage />} />
+              <Route path="/packs/:slug" element={<PackDetailPage />} />
+              <Route path="/pack/:slug" element={<PackDetailPage />} />
+              <Route path="/studio" element={<StudioPage />} />
+              <Route path="/mix" element={<MixPage />} />
+              <Route path="/mix/:code" element={<MixPage />} />
 
-            {/* Admin Routes */}
-            <Route path="/admin/login" element={<AdminLoginPage />} />
-            <Route
-              path="/admin"
-              element={<Navigate to="/admin/packs" replace />}
-            />
-            <Route
-              path="/admin/packs"
-              element={
-                <AdminRoute>
-                  <AdminPacksPage />
-                </AdminRoute>
-              }
-            />
-            <Route
-              path="/admin/packs/new"
-              element={
-                <AdminRoute>
-                  <AdminPackEditorPage />
-                </AdminRoute>
-              }
-            />
-            <Route
-              path="/admin/packs/:id/edit"
-              element={
-                <AdminRoute>
-                  <AdminPackEditorPage />
-                </AdminRoute>
-              }
-            />
+              {/* Shared User & Admin Auth Routes */}
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
 
-            <Route path="*" element={<NotFoundPlaceholder />} />
-          </Routes>
-        </main>
-      </AdminAuthProvider>
+              {/* Admin Routes */}
+              <Route path="/admin/login" element={<AdminLoginPage />} />
+              <Route
+                path="/admin"
+                element={<Navigate to="/admin/packs" replace />}
+              />
+              <Route
+                path="/admin/packs"
+                element={
+                  <AdminRoute>
+                    <AdminPacksPage />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/admin/packs/new"
+                element={
+                  <AdminRoute>
+                    <AdminPackEditorPage />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/admin/packs/:id/edit"
+                element={
+                  <AdminRoute>
+                    <AdminPackEditorPage />
+                  </AdminRoute>
+                }
+              />
+
+              <Route path="*" element={<NotFoundPlaceholder />} />
+            </Routes>
+          </main>
+        </AdminAuthProvider>
+      </UserAuthProvider>
 
       {/* Persistent Mix & Match Dock across public views (hidden in Admin) */}
       {!location.pathname.startsWith('/admin') && (

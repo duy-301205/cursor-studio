@@ -146,7 +146,7 @@ POST /auth/logout    Cookie User + X-CSRF-Token
 - **Yêu cầu** — Áp bảng quyền U01 tại backend. Kiểm cả API và URL tải trực tiếp từ pack legacy/managed, bảo toàn khả năng tải của User hợp lệ, và kiểm quyền trước thao tác nặng hoặc thay đổi dữ liệu. Phối hợp frontend chuyển editor Admin sang convert riêng trước khi thêm guard vào Studio. Kiểm thay đổi cache Share và raw binary.
 - **Nghiệm thu** — PASS khi khách vẫn đọc được Gallery/chi tiết, nhận 401 khi gọi chức năng được bảo vệ, User hợp lệ vẫn dùng được và User nhận từ chối với Admin API. Admin vẫn tạo CUR được từ editor. Cache hoặc URL cũ không cấp quyền tải cho khách.
 
-### [ ] U05 — Giao diện đăng nhập và đăng ký dùng chung
+### [x] U05 — Giao diện đăng nhập và đăng ký dùng chung
 
 - **Phụ trách** — Antigravity. **Phụ thuộc** — U01, U03.
 - **Phạm vi dự kiến** — Thành phần form dùng chung, trang `/login`, `/register`, tích hợp `/admin/login` và typed API client.
@@ -235,3 +235,37 @@ POST /auth/logout    Cookie User + X-CSRF-Token
 CDN/R2 staging chưa kiểm thử. Trước cutover phải chặn raw binary ở edge và bucket public, purge cache URL cũ và Share, thử phát hành phối hợp với U07/U09.
 
 **Tiếp theo phía frontend — U05–U07 (Antigravity). Task backend kế tiếp — U08.**
+
+## Kết quả U05
+
+**2026-11-19 · Antigravity · PASS**
+
+- Primary files: `frontend/src/features/auth/LoginPage.tsx`, `frontend/src/features/auth/RegisterPage.tsx`, `frontend/src/lib/userApi.ts`, `frontend/src/types/userAuth.ts`, `frontend/src/components/UserAuthProvider.tsx`.
+- Supporting files: `frontend/src/App.tsx` (routing `/login`, `/register`, `UserAuthProvider`), `frontend/src/tests/userAuth.test.ts`, `frontend/package.json`.
+- Typed User API Client ([userApi.ts](file:///e:/cursor-studio/frontend/src/lib/userApi.ts)):
+  - Quản lý CSRF token User hoàn toàn trong bộ nhớ (`getUserCsrfToken`, `setUserCsrfToken`, `clearUserCsrfToken`), tách biệt hoàn toàn với phiên Admin.
+  - Tự động đính kèm `credentials: 'include'` trên toàn bộ các request qua same-origin dev proxy `http://localhost:5173`.
+  - Thực thi 4 API: `POST /api/v1/auth/register`, `POST /api/v1/auth/login`, `GET /api/v1/auth/me`, `POST /api/v1/auth/logout`.
+  - Phân loại lỗi tường minh với `UserApiError` (`isUnauthorized`, `isEmailUnavailable`, `isValidationError`, `isRateLimited`, `isForbidden`, `isNotFound`).
+  - Hàm làm sạch URL điều hướng an toàn `getSafeRedirectUrl`: Chấp nhận route nội bộ hợp lệ, chặn đứng URL ngoài (`http://`, `https://`, `//`), backslash, ký tự điều khiển và chặn toàn bộ các route `/admin/*` đối với User.
+- Trang Đăng Nhập Dùng Chung ([LoginPage.tsx](file:///e:/cursor-studio/frontend/src/features/auth/LoginPage.tsx)):
+  - Một trường định danh duy nhất nhận diện tự động: nếu có `@` điều phối gọi User API (`/api/v1/auth/login`), nếu không có `@` điều phối gọi Admin API (`/api/v1/admin/auth/login`).
+  - Điều hướng chính xác theo loại tài khoản: Admin vào thẳng `/admin/packs`, User chuyển về trang nội bộ hợp lệ vừa thao tác hoặc về `/`.
+  - Thông báo lỗi 401 generic không tiết lộ sự tồn tại của tài khoản, countdown timer thời gian chờ khi gặp 429 `Retry-After`.
+  - Chống double-submit, loading spinner, bàn phím và responsive mobile 375px/768px/1440px.
+  - Giữ nguyên lối vào riêng `/admin/login` cho Quản trị viên.
+- Trang Đăng Ký Người Dùng ([RegisterPage.tsx](file:///e:/cursor-studio/frontend/src/features/auth/RegisterPage.tsx)):
+  - Form đăng ký User với email và mật khẩu (ràng buộc 15–128 ký tự chuẩn Argon2id).
+  - Đăng ký thành công trả về 201, tự động chuyển sang `/login` kèm thông báo thành công và điền sẵn email theo đúng hợp đồng.
+  - Báo lỗi email trùng `409 EMAIL_UNAVAILABLE` và lỗi validation `422`.
+- Unit & Live Integration Tests ([userAuth.test.ts](file:///e:/cursor-studio/frontend/src/tests/userAuth.test.ts)):
+  - 6 ca kiểm thử bao phủ toàn diện: sanitization redirect an toàn, phân loại định danh email/username, CSRF store trong bộ nhớ, phân loại mã lỗi `UserApiError`, mock flows với 204 No Content, và **kiểm thử tích hợp trực tiếp với backend thật** (đăng ký user mới, từ chối trùng email 409, sai mật khẩu 401, đăng nhập 200, lấy danh tính me, và đăng xuất 204).
+
+| Kiểm tra | Kết quả |
+|---|---|
+| `npm run typecheck` (`tsc --noEmit`) | PASS, 0 errors với strict, exactOptionalPropertyTypes, noUncheckedIndexedAccess. |
+| `npm test` (`node --test --experimental-strip-types`) | 79/79 PASS (6 tests mới `userAuth.test.ts` + 73 tests từ các suite trước). |
+| Backend Live Test (ca 6 `userAuth.test.ts`) | PASS trực tiếp với FastAPI backend (Argon2id, MySQL session token, cookie và CSRF). |
+| `npm run build` (`tsc && vite build`) | PASS, bundle production sạch trong 22.91s, 0 cảnh báo. |
+
+**Task kế tiếp của Antigravity — U06, Nút tài khoản và trạng thái phiên trên Gallery. Dừng trước U06.**

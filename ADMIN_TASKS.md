@@ -94,7 +94,7 @@ Theo ADMIN_EXTENSION §9 và [ADMIN_SPEC.md](ADMIN_SPEC.md). Codex sở hữu ba
 - **Nghiệm thu / kiểm thử** — npm run typecheck, npm test, npm run build. HTTP client tests với 204, malformed response, 401, 409 và abort; kiểm typings không any.
 - **PASS/FAIL** — PASS nếu wrappers khớp spec và không tự retry writes. FAIL nếu token vào localStorage, mất ETag hoặc giả lập success trong luồng thật.
 
-### [ ] A11 — Login + Route Guard
+### [x] A11 — Login + Route Guard
 
 - **Agent / phụ thuộc** — Antigravity. A10.
 - **File chính** — frontend/src/features/admin/AdminLoginPage.tsx, frontend/src/components/admin/AdminRoute.tsx. frontend/src/App.tsx wiring cần duyệt supporting scope.
@@ -102,7 +102,7 @@ Theo ADMIN_EXTENSION §9 và [ADMIN_SPEC.md](ADMIN_SPEC.md). Codex sở hữu ba
 - **Nghiệm thu / kiểm thử** — npm run typecheck, npm test, npm run build; browser live login/logout, reload cookie, expired session và direct route trên mobile.
 - **PASS/FAIL** — PASS nếu guard không flash dữ liệu và login messages generic. FAIL nếu mất auth khi refresh hợp lệ hoặc protected data được render trước khi me thành công.
 
-### [ ] A12 — Admin Pack List
+### [x] A12 — Admin Pack List
 
 - **Agent / phụ thuộc** — Antigravity. A11.
 - **File chính** — frontend/src/features/admin/AdminPacksPage.tsx, frontend/src/components/admin/AdminPackTable.tsx.
@@ -110,7 +110,7 @@ Theo ADMIN_EXTENSION §9 và [ADMIN_SPEC.md](ADMIN_SPEC.md). Codex sở hữu ba
 - **Nghiệm thu / kiểm thử** — npm run typecheck, npm test, npm run build; browser 375/768/1440, search/pagination, tạo draft và refresh vẫn thấy đúng dữ liệu.
 - **PASS/FAIL** — PASS nếu list khớp server và hỗ trợ keyboard. FAIL nếu mock thay dữ liệu thật hoặc lệch filter/trạng thái.
 
-### [ ] A13 — Pack Editor & 8-Role Assets
+### [x] A13 — Pack Editor & 8-Role Assets
 
 - **Agent / phụ thuộc** — Antigravity. A12.
 - **File chính** — frontend/src/features/admin/AdminPackEditorPage.tsx, frontend/src/components/admin/RoleAssetEditor.tsx.
@@ -118,7 +118,7 @@ Theo ADMIN_EXTENSION §9 và [ADMIN_SPEC.md](ADMIN_SPEC.md). Codex sở hữu ba
 - **Nghiệm thu / kiểm thử** — npm run typecheck, npm test, npm run build; browser live upload, 32/48 hotspot cạnh biên, stale conflict, refresh, CSRF/session expiry và double submit.
 - **PASS/FAIL** — PASS nếu draft được lưu đúng và gán lại an toàn. FAIL nếu hotspot khác CUR, hỏng state khi retry hoặc published sửa được.
 
-### [ ] A14 — Validation, Sandbox Preview & Publish UI
+### [x] A14 — Validation, Sandbox Preview & Publish UI
 
 - **Agent / phụ thuộc** — Antigravity. A13.
 - **File chính** — frontend/src/components/admin/PublishChecklist.tsx, frontend/src/components/admin/AdminPackPreview.tsx.

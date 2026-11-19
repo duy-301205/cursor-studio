@@ -207,4 +207,166 @@ Sửa ca DecompressionBombWarning vì Studio cấu hình Pillow nâng cảnh bá
 | 19 ca kiểm thử `src/tests/adminApi.test.ts` | PASS: 204 No Content, malformed responses, 401 Unauthorized, 409 Revision Conflict, 428 Precondition Required, 429 Rate Limited với Retry-After, AbortSignal cancel, và Live Backend Integration test qua proxy dev. |
 | `npm run build` (`tsc && vite build`) | PASS, bundle production `dist/` sạch sẽ. |
 
-**Task kế tiếp — A11, Login + Route Guard (Frontend). Dừng trước A11 theo đúng yêu cầu.**
+**Task kế tiếp — A11, Login + Route Guard (Frontend).**
+
+## A11 — Login + Route Guard
+
+**2026-11-19 · Antigravity · PASS**
+
+- Primary files: `frontend/src/features/admin/AdminLoginPage.tsx`, `frontend/src/components/admin/AdminRoute.tsx`.
+- Supporting files: `frontend/src/App.tsx` (routing & auth provider wiring), `frontend/src/tests/adminAuth.test.ts`, `frontend/package.json`.
+- Hiện thực component [AdminRoute](frontend/src/components/admin/AdminRoute.tsx) bảo vệ các route `/admin/*`:
+  - `AdminAuthProvider` quản lý trạng thái phiên (`admin`, `isLoading`, `isAuthenticated`, `error`) qua hook `useAdminAuth()`.
+  - Khi mount/reload: tự động gọi `GET /auth/me` với `credentials: 'include'` để khôi phục phiên qua cookie HttpOnly.
+  - Phân định rõ 3 trạng thái:
+    1. `isLoading`: hiển thị skeleton/spinner thông báo "Xác thực phiên quản trị viên...", **tuyệt đối không flash dữ liệu bảo vệ** và không chuyển hướng sớm khi chưa có kết quả từ server.
+    2. `unauthenticated`: tự động chuyển hướng về `/admin/login` kèm `state: { from: location }` để lưu đích đến sau khi đăng nhập.
+    3. `authenticated`: hiển thị nội dung được bảo vệ kèm Subheader Admin Console (hiển thị username, trạng thái hoạt động, nút Đăng xuất).
+  - Nút Đăng xuất gọi `logout()` từ `adminApi.ts` (thu hồi phiên server-side qua 204 No Content, xóa CSRF token trong bộ nhớ, xóa cookie HttpOnly), sau đó chuyển hướng về `/admin/login`.
+- Hiện thực trang [AdminLoginPage](frontend/src/features/admin/AdminLoginPage.tsx):
+  - Form đăng nhập chuẩn UX/A11y: label đầy đủ, focus visible, aria-describedby, phím Enter gửi form, chống double-submit khi đang gửi request.
+  - Xử lý lỗi 401 với thông điệp chung: "Tên đăng nhập hoặc mật khẩu không chính xác." (không tiết lộ việc tài khoản có tồn tại hay không).
+  - Xử lý lỗi 429 RATE_LIMITED: trích xuất `retryAfter` từ header phản hồi và kích hoạt bộ đếm ngược thời gian (countdown timer) hiển thị trực tiếp trên banner lỗi.
+  - Tự động chuyển hướng về trang đích hoặc `/admin/packs` nếu đã có phiên hoạt động.
+  - Tuyệt đối không lưu mật khẩu hoặc token vào `localStorage` hay `sessionStorage`.
+- Cấu hình điều hướng trong [App.tsx](frontend/src/App.tsx):
+  - Bọc `AdminAuthProvider` cho các route `/admin/*`.
+  - Khai báo route `/admin/login`, `/admin` (chuyển hướng `/admin/packs`), và `/admin/packs` (bọc bởi `AdminRoute`).
+  - Ẩn thanh dock `MixMatchDock` trên toàn bộ các route bắt đầu bằng `/admin`.
+  - Không đưa bất kỳ liên kết Admin nào vào public navbar hoặc footer sitemap.
+
+### Bằng chứng kiểm thử
+
+| Kiểm tra | Kết quả |
+|---|---|
+| `npm run typecheck` (`tsc --noEmit`) | PASS, 0 errors với strict, exactOptionalPropertyTypes, noUncheckedIndexedAccess. |
+| `npm test` (`node --test --experimental-strip-types`) | 56/56 PASS (7 tests mới `adminAuth.test.ts` + 19 tests `adminApi.test.ts` + 30 tests hồi quy). |
+| 7 ca kiểm thử `src/tests/adminAuth.test.ts` | PASS: Thông điệp generic 401, đếm ngược Retry-After 429, kiểm tra input client-side, xác minh không lưu token trong localStorage, chuyển đổi trạng thái guard không flash dữ liệu, quy trình logout xóa phiên, và kiểm thử tích hợp backend dev. |
+| `npm run build` (`tsc && vite build`) | PASS, build production `dist/` thành công trong 19s. |
+
+**Task kế tiếp — A12, Admin Pack List (Frontend).**
+
+## A12 — Admin Pack List
+
+**2026-11-19 · Antigravity · PASS**
+
+- Primary files: `frontend/src/features/admin/AdminPacksPage.tsx`, `frontend/src/components/admin/AdminPackTable.tsx`.
+- Supporting files: `frontend/src/App.tsx`, `frontend/src/tests/adminPacks.test.ts`, `frontend/package.json`.
+- Hiện thực component [AdminPackTable](frontend/src/components/admin/AdminPackTable.tsx):
+  - Hiển thị bảng dạng desktop đầy đủ thông tin: Thumbnail pack (placeholder fallback an toàn), Tiêu đề & Slug, Danh mục, Trạng thái (Draft/Published với Badge trực quan), Revision & Trạng thái quản lý (Managed vs Legacy read-only), Ngày cập nhật.
+  - Hỗ trợ giao diện mobile dạng card responsive mượt mà trên 375px/768px/1440px.
+  - Phân biệt rõ pack có `managed: true` (cho phép bấm "Chỉnh sửa" dẫn đến `/admin/packs/:id/edit`) và pack legacy `managed: false` (hiển thị nhãn "Legacy (Chỉ đọc)" với tooltip giải thích).
+  - Đối với pack `published`, cung cấp nút xem trực tiếp tại Public Gallery (`/packs/:slug`) mở trong tab mới.
+  - Trạng thái loading skeleton và empty state thân thiện với nút "Tạo pack mới".
+- Hiện thực trang [AdminPacksPage](frontend/src/features/admin/AdminPacksPage.tsx):
+  - Lấy dữ liệu thật qua API `getPacks({ status, q, page, limit })` và `getCategories()` từ `adminApi.ts` và `api.ts`.
+  - Đồng bộ trạng thái tìm kiếm và bộ lọc với URL Search Params (`q`, `status`, `page`), hỗ trợ bookmark và reload trình duyệt giữ nguyên ngữ cảnh.
+  - Debounce 250ms cho ô tìm kiếm tên/slug pack, tránh gửi request dồn dập.
+  - Tự động hủy stale request thông qua `AbortController` khi người dùng thay đổi bộ lọc hoặc trang nhanh chóng.
+  - Phân trang đầy đủ (Previous / Next / nhảy số trang) kèm thông tin số lượng kết quả hiển thị.
+  - Header với tiêu đề quản trị, số lượng tổng, nút "Làm mới" và nút CTA chính "Tạo pack mới" (`/admin/packs/new`).
+  - Xử lý lỗi với banner thông báo và nút "Thử lại".
+- Wiring trong [App.tsx](frontend/src/App.tsx):
+  - Tích hợp `AdminPacksPage` vào route `/admin/packs` bên trong `AdminRoute`.
+  - Loại bỏ placeholder tạm thời.
+- Unit & Integration Tests trong [adminPacks.test.ts](frontend/src/tests/adminPacks.test.ts):
+  - 5 ca kiểm thử kiểm tra tính toán phân trang, định dạng query param cho API, ánh xạ category ID, xử lý fallback ảnh/empty state, và tích hợp live backend dev qua proxy.
+
+### Bằng chứng kiểm thử
+
+| Kiểm tra | Kết quả |
+|---|---|
+| `npm run typecheck` (`tsc --noEmit`) | PASS, 0 errors với strict, exactOptionalPropertyTypes, noUncheckedIndexedAccess. |
+| `npm test` (`node --test --experimental-strip-types`) | 61/61 PASS (5 tests mới `adminPacks.test.ts` + 7 tests `adminAuth.test.ts` + 19 tests `adminApi.test.ts` + 30 tests hồi quy). |
+| 5 ca kiểm thử `src/tests/adminPacks.test.ts` | PASS: Tính toán phân trang, parse/format filter query, ánh xạ danh mục, phân biệt managed vs legacy, live backend integration. |
+| `npm run build` (`tsc && vite build`) | PASS, build production `dist/` thành công trong 19.75s, không có cảnh báo nào. |
+
+**Task kế tiếp — A13, Pack Editor & 8-Role Assets (Frontend).**
+
+## A13 — Pack Editor & 8-Role Assets
+
+**2026-11-19 · Antigravity · PASS**
+
+- Primary files: `frontend/src/features/admin/AdminPackEditorPage.tsx`, `frontend/src/components/admin/RoleAssetEditor.tsx`.
+- Supporting files: `frontend/src/App.tsx` (routing `/admin/packs/new` & `/admin/packs/:id/edit`), `frontend/src/tests/adminEditor.test.ts`, `frontend/package.json`.
+- Hiện thực trang [AdminPackEditorPage](frontend/src/features/admin/AdminPackEditorPage.tsx):
+  - Hỗ trợ 2 chế độ:
+    1. **Tạo pack mới (`/admin/packs/new`)**: Điền metadata (title, slug với auto-slugify chuẩn hóa tiếng Việt, category_id, description, is_premium). Gọi `createPack(data)` và điều hướng sang `/admin/packs/:id/edit` sau khi tạo thành công.
+    2. **Chỉnh sửa pack (`/admin/packs/:id/edit`)**: Lấy chi tiết pack và ETag revision từ `getPack(id)` và danh mục từ `getCategories()`. Lưu metadata với `updatePack(id, patchData, etag)`.
+  - **Khóa bảo vệ toàn diện (Read-only Guard)**:
+    - Nếu pack ở trạng thái `published`: Hiển thị banner cảnh báo và khóa toàn bộ form/upload/assign role (yêu cầu Unpublish trước khi sửa theo quy chuẩn).
+    - Nếu pack `managed: false`: Hiển thị banner cảnh báo Legacy chỉ đọc, vô hiệu hóa form.
+  - **Quản lý Thumbnail Pack**:
+    - Hiển thị ảnh thumbnail hiện tại (WebP/PNG).
+    - Hỗ trợ tải lên ảnh thumbnail mới (PNG/WebP <= 2MB, tối đa 512×512) qua `uploadAsset(id, { file, kind: 'thumbnail' }, etag)` và tự động liên kết bằng `updatePack`.
+    - Hỗ trợ gỡ thumbnail bằng cách gửi `thumbnail_asset_id: null`.
+  - **Xử lý xung đột & ETag UX**:
+    - Khi gặp lỗi `409 REVISION_CONFLICT` hoặc `428 PRECONDITION_REQUIRED`: Hiển thị banner cảnh báo phiên bản cũ kèm nút "Tải lại bản nháp", bảo vệ dữ liệu không bị ghi đè.
+    - Chống double-submit trên tất cả các thao tác ghi.
+    - Hiển thị lỗi theo từng trường (field-level errors) khi nhận mã `422` hoặc `409 SLUG_CONFLICT`.
+- Hiện thực component [RoleAssetEditor](frontend/src/components/admin/RoleAssetEditor.tsx):
+  - Hiển thị lưới 8 canonical roles (`pointer`, `link`, `text`, `busy`, `working`, `precision`, `unavailable`, `move`) với biểu tượng, nhãn tiếng Việt/tiếng Anh, mô tả ngữ cảnh và thanh tiến độ gán role (`x / 8 Roles`).
+  - Phân biệt trạng thái từng role: Đã gán (badge xanh + ảnh preview + tọa độ hotspot + asset ID) vs Chưa gán (badge cam).
+  - Hộp thoại gán Role (`Assign Role Modal`):
+    - **Bước 1**: Chọn hoặc tải lên Preview PNG mới (chuẩn hóa RGBA PNG 32×32 hoặc 48×48), hoặc chọn từ các asset preview đã có trong pack.
+    - **Bước 2**: Tái sử dụng [HotspotGridPicker](frontend/src/components/HotspotGridPicker.tsx) để trực quan hóa và thiết lập điểm neo (hotspot X, Y) tương tác chuột/bàn phím với lưới 32×32 hoặc 48×48.
+    - **Bước 3**: Cung cấp 2 phương thức chuẩn bị CUR: (a) Tự động sinh file `.cur` từ ảnh Preview + Hotspot thông qua Studio API `convertCursor`, hoặc (b) Tải lên file `.cur` có sẵn.
+    - **Bước 4**: Tải lên asset và gọi `assignRole(packId, role, { asset_id, preview_asset_id, hotspot_x, hotspot_y }, etag)` để hoàn tất liên kết role.
+- Wiring trong [App.tsx](frontend/src/App.tsx):
+  - Đăng ký route `/admin/packs/new` và `/admin/packs/:id/edit` bên trong `AdminRoute` được bảo vệ.
+- Unit & Integration Tests trong [adminEditor.test.ts](frontend/src/tests/adminEditor.test.ts):
+  - 7 ca kiểm thử bao phủ: logic chuẩn hóa slugify tiếng Việt có dấu, kiểm tra hợp lệ metadata client-side, khóa read-only cho published/legacy pack, thứ tự 8 canonical roles, cấu trúc payload gán role, phân loại lỗi 409/428, và kiểm thử tích hợp backend dev.
+
+### Bằng chứng kiểm thử
+
+| Kiểm tra | Kết quả |
+|---|---|
+| `npm run typecheck` (`tsc --noEmit`) | PASS, 0 errors với strict, exactOptionalPropertyTypes, noUncheckedIndexedAccess. |
+| `npm test` (`node --test --experimental-strip-types`) | 68/68 PASS (7 tests mới `adminEditor.test.ts` + 5 tests `adminPacks.test.ts` + 7 tests `adminAuth.test.ts` + 19 tests `adminApi.test.ts` + 30 tests hồi quy). |
+| 7 ca kiểm thử `src/tests/adminEditor.test.ts` | PASS: Slugify tiếng Việt chuẩn ASCII, metadata validation constraints, khóa read-only published & legacy, thứ tự 8 canonical roles, role assignment request bounds, phân loại lỗi 409 REVISION_CONFLICT & 428, live backend test. |
+| `npm run build` (`tsc && vite build`) | PASS, build production `dist/` thành công trong 17.59s, không có cảnh báo nào. |
+
+**Task kế tiếp — A14, Validation, Sandbox Preview & Publish UI (Frontend).**
+
+## A14 — Validation, Sandbox Preview & Publish UI
+
+**2026-11-19 · Antigravity · PASS**
+
+- Primary files: `frontend/src/components/admin/PublishChecklist.tsx`, `frontend/src/components/admin/AdminPackPreview.tsx`.
+- Supporting files: `frontend/src/features/admin/AdminPackEditorPage.tsx` (tích hợp Sandbox & Checklist), `frontend/src/tests/adminPublish.test.ts`, `frontend/package.json`.
+- Hiện thực component [AdminPackPreview](frontend/src/components/admin/AdminPackPreview.tsx):
+  - Tái sử dụng [InteractiveSandbox](frontend/src/components/InteractiveSandbox.tsx) 8 vùng chức năng mô phỏng Windows tương tác thực tế với theme độc lập (`light` / `dark`).
+  - Ánh xạ an toàn từ danh sách `AdminPackRole[]` sang map `CursorAsset` với URL ảnh preview có xác thực (`preview_png_url`), hotspot (X, Y) và native CSS fallback chuẩn hóa.
+  - Hỗ trợ thanh thông tin thanh tra (Inspect Role) khi người dùng rê chuột hoặc tương tác trên các vùng Sandbox, hiển thị tên role, tọa độ điểm neo và trạng thái gán.
+- Hiện thực component [PublishChecklist](frontend/src/components/admin/PublishChecklist.tsx):
+  - **Kiểm định hợp lệ theo Revision (Validate)**:
+    - Gọi API `POST /packs/:id/validate` qua `validatePack(id, etag)`.
+    - Phân tích và hiển thị trực quan báo cáo từ server (`AdminValidationReport`): Trạng thái hợp lệ (`valid`), Revision snapshot, danh sách role còn thiếu (`missing_roles`), lỗi và cảnh báo chi tiết theo từng trường (`field`).
+  - **Bảng tiêu chí nghiệm thu 4/4**:
+    1. Metadata hợp lệ (Tiêu đề, Slug, Danh mục).
+    2. Thumbnail Pack đã được tải lên và gán.
+    3. Đủ 8 roles Canonical (`pointer`, `link`, `text`, `busy`, `working`, `precision`, `unavailable`, `move`).
+    4. Báo cáo kiểm định toàn vẹn server (Header CUR, hotspot, geometry, hash SHA-256).
+  - **Quy trình Xuất bản (Publish)**:
+    - Nút "Xuất Bản (Publish)" gọi `publishPack(id, etag)`.
+    - Xử lý lỗi `422 PACK_INVALID` với chi tiết lỗi theo trường; xử lý `409 REVISION_CONFLICT` yêu cầu tải lại bản nháp; chống double-submit khi đang gọi API.
+    - Cập nhật trạng thái pack thành `published` và tăng revision ETag sau khi xuất bản thành công.
+  - **Quy trình Gỡ xuất bản (Unpublish) có Hộp thoại Xác nhận**:
+    - Khi pack ở trạng thái `published`, hiển thị nút "Gỡ Xuất Bản (Unpublish)".
+    - Mở modal xác nhận cảnh báo rõ ràng các tác động (pack sẽ bị ẩn ngay khỏi Gallery, link công khai trả về 404, share code trả về 410, bản nháp được mở khóa để tiếp tục sửa).
+    - Gọi `unpublishPack(id, etag)` sau khi xác nhận, chuyển trạng thái pack về `draft` an toàn.
+  - **Liên kết Public Gallery**:
+    - Khi pack đã xuất bản, hiển thị nút liên kết mở trực tiếp trang chi tiết công khai `/packs/:slug` trong tab mới.
+- Unit & Integration Tests trong [adminPublish.test.ts](frontend/src/tests/adminPublish.test.ts):
+  - 5 ca kiểm thử bao phủ: phân tích cấu trúc báo cáo kiểm định `AdminValidationReport`, thuật toán xác minh 8 canonical roles, quy tắc chuyển đổi trạng thái Draft ↔ Published ↔ Draft với revision mới, bắt lỗi `422 PACK_INVALID`, và kiểm thử từ chối xuất bản pack chưa hoàn thiện với backend dev.
+
+### Bằng chứng kiểm thử
+
+| Kiểm tra | Kết quả |
+|---|---|
+| `npm run typecheck` (`tsc --noEmit`) | PASS, 0 errors với strict, exactOptionalPropertyTypes, noUncheckedIndexedAccess. |
+| `npm test` (`node --test --experimental-strip-types`) | 73/73 PASS (5 tests mới `adminPublish.test.ts` + 7 tests `adminEditor.test.ts` + 5 tests `adminPacks.test.ts` + 7 tests `adminAuth.test.ts` + 19 tests `adminApi.test.ts` + 30 tests hồi quy). |
+| 5 ca kiểm thử `src/tests/adminPublish.test.ts` | PASS: Parse validation report, 8 roles completeness check, Draft ↔ Published transition invariants, 422 PACK_INVALID error handling, live backend validate & rejection. |
+| `npm run build` (`tsc && vite build`) | PASS, build production `dist/` thành công trong 19.15s, không có cảnh báo nào. |
+
+**Task kế tiếp — A15, End-to-End Admin Acceptance & Security Gate (Stage D). Dừng trước A15 theo đúng quy tắc.**

@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Sun,
   Moon,
@@ -13,6 +14,8 @@ import {
   Info,
 } from 'lucide-react';
 import type { CursorAsset, CursorRole } from '../types/api';
+import { getAdminApiBaseUrl } from '../lib/adminApi.ts';
+import { getApiBaseUrl } from '../lib/api.ts';
 
 export interface InteractiveSandboxProps {
   rolePreviews: Partial<Record<CursorRole, CursorAsset>>;
@@ -87,6 +90,35 @@ const ROLES_CONFIG: readonly RoleConfig[] = [
   },
 ] as const;
 
+function animationEndpoint(asset: CursorAsset | undefined, role: CursorRole): string | null {
+  if (!asset) return null;
+  if (!asset.cursor_file_url) {
+    const adminPack = asset.preview_png_url.match(
+      /^\/api\/v1\/admin\/packs\/([1-9]\d{0,15})\/assets\/[0-9a-f-]+\/content$/
+    )?.[1];
+    return adminPack ? `${getAdminApiBaseUrl()}/packs/${adminPack}/roles/${role}/animation` : null;
+  }
+  const cursorPath = URL.canParse(asset.cursor_file_url, window.location.origin)
+    ? new URL(asset.cursor_file_url, window.location.origin).pathname
+    : '';
+  if (!cursorPath.endsWith('.ani')) return null;
+  const publicPack = cursorPath.match(
+    /\/(?:packs\/([1-9]\d{0,15})\/assets\/[^/]+\/cursor|managed\/([1-9]\d{0,15})\/[^/]+)\.ani$/
+  );
+  const packId = publicPack?.[1] ?? publicPack?.[2];
+  return packId ? `${getApiBaseUrl()}/packs/${packId}/assets/${role}/animation` : null;
+}
+
+const PREVIEW_SIZE = 32;
+
+interface CursorPreview {
+  asset: CursorAsset;
+  source: string;
+  width: number;
+  height: number;
+  animated: boolean;
+}
+
 export function InteractiveSandbox({
   rolePreviews,
   initialMode = 'light',
@@ -95,6 +127,78 @@ export function InteractiveSandbox({
   // Independent sandbox theme state (RULES.md F03 — completely isolated from website theme)
   const [sandboxMode, setSandboxMode] = useState<'light' | 'dark'>(initialMode);
   const [activeZone, setActiveZone] = useState<CursorRole | null>(null);
+  const [preview, setPreview] = useState<CursorPreview | null>(null);
+  const pointer = useRef({ x: 0, y: 0 });
+  const previewImage = useRef<HTMLImageElement>(null);
+  const activeAsset = activeZone ? rolePreviews[activeZone] : undefined;
+  const endpoint = activeZone ? animationEndpoint(activeAsset, activeZone) : null;
+  const renderedPreview = preview?.asset === activeAsset ? preview : null;
+  const hotspotX = renderedPreview
+    ? renderedPreview.asset.hotspot_x * PREVIEW_SIZE / renderedPreview.width
+    : 0;
+  const hotspotY = renderedPreview
+    ? renderedPreview.asset.hotspot_y * PREVIEW_SIZE / renderedPreview.height
+    : 0;
+
+  useEffect(() => {
+    if (!activeAsset?.preview_png_url) return;
+    const asset = activeAsset;
+    const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const controller = new AbortController();
+    let objectUrl: string | undefined;
+    const stop = () => setActiveZone(null);
+
+    const showImage = async (source: string, animated: boolean) => {
+      const image = new Image();
+      image.src = source;
+      await image.decode();
+      if (!controller.signal.aborted && image.naturalWidth && image.naturalHeight) {
+        setPreview({
+          asset, source, width: image.naturalWidth, height: image.naturalHeight, animated,
+        });
+      }
+    };
+
+    const load = async () => {
+      try {
+        await showImage(asset.preview_png_url, false);
+      } catch {
+        // The zone still has its CSS cursor fallback.
+      }
+      if (!endpoint || motion.matches || controller.signal.aborted) return;
+      try {
+        const response = await fetch(endpoint, {
+          credentials: endpoint.startsWith(getAdminApiBaseUrl() + '/') ? 'include' : 'same-origin',
+          signal: controller.signal,
+        });
+        if (!response.ok || response.headers.get('content-type') !== 'image/png') return;
+        const blob = await response.blob();
+        if (controller.signal.aborted) return;
+        objectUrl = URL.createObjectURL(blob);
+        await showImage(objectUrl, true);
+      } catch {
+        // Keep the static image if the animation cannot be loaded.
+      }
+    };
+    void load();
+    window.addEventListener('blur', stop);
+    motion.addEventListener('change', stop);
+    return () => {
+      controller.abort();
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      setPreview(null);
+      window.removeEventListener('blur', stop);
+      motion.removeEventListener('change', stop);
+    };
+  }, [endpoint, activeAsset]);
+
+  const movePointer = (event: React.PointerEvent<HTMLDivElement>) => {
+    pointer.current = { x: event.clientX, y: event.clientY };
+    if (previewImage.current) {
+      previewImage.current.style.left = `${event.clientX - hotspotX}px`;
+      previewImage.current.style.top = `${event.clientY - hotspotY}px`;
+    }
+  };
 
   const toggleSandboxTheme = (): void => {
     setSandboxMode((prev) => (prev === 'light' ? 'dark' : 'light'));
@@ -204,12 +308,15 @@ export function InteractiveSandbox({
             <div
               key={role}
               data-cursor-role={role}
-              style={{ cursor: cursorValue }}
-              onMouseEnter={() => {
+              style={{ cursor: activeZone === role && renderedPreview ? 'none' : cursorValue }}
+              onPointerEnter={(event) => {
+                if (event.pointerType === 'touch') return;
+                movePointer(event);
                 setActiveZone(role);
                 onRoleInspect?.(role);
               }}
-              onMouseLeave={() => {
+              onPointerMove={movePointer}
+              onPointerLeave={() => {
                 setActiveZone((prev) => (prev === role ? null : prev));
               }}
               className={`group relative rounded-xl border p-4 flex flex-col justify-between min-h-[140px] transition-all duration-150 shadow-sm ${zoneCardClasses}`}
@@ -265,6 +372,24 @@ export function InteractiveSandbox({
           );
         })}
       </div>
+      {renderedPreview && createPortal(
+        <img
+          ref={previewImage}
+          src={renderedPreview.source}
+          alt=""
+          aria-hidden="true"
+          data-sandbox-cursor={renderedPreview.animated ? 'animated' : 'static'}
+          className="pointer-events-none fixed z-50 max-w-none [image-rendering:pixelated]"
+          style={{
+            width: PREVIEW_SIZE,
+            height: PREVIEW_SIZE,
+            left: pointer.current.x - hotspotX,
+            top: pointer.current.y - hotspotY,
+          }}
+          onError={() => setPreview(null)}
+        />,
+        document.body
+      )}
     </div>
   );
 }

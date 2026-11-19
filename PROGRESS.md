@@ -778,6 +778,10 @@ next_task: T02
 - **2026-11-19 · Codex · Trạng thái draft và mobile PASS.** Hai file mã nguồn thay đổi là `backend/app/api/v1/admin_packs.py` và `frontend/src/components/admin/AdminPackTable.tsx`. Status Admin draft suy ra từ binding ANI hiện tại, cùng query phân trang, giữ public projection như cũ. Chrome 390 px trên MySQL cô lập đạt gán ANI, hiện huy hiệu, mở lại, hủy và thay bằng CUR làm cờ trở về false. Build frontend, Ruff, format, mypy và 74 pytest offline đạt, 23 ca integration được bỏ qua trong suite offline.
 - **Windows 10 build 19045 · kiểm Win32 PASS.** ZIP thử có đủ 15 slot, Wait trỏ đúng `busy.ani`; nạp được ANI và CUR, vẽ được 4 frame Busy khác nhau. Còn cài/áp dụng `Install.inf` thật trên Windows 10/11. Workspace không có môi trường Windows 11 phục vụ kiểm thử. Bước tiếp theo là nghiệm thu cài đặt trên hai phiên bản Windows, sau đó đối chiếu staging.
 
+- **2026-11-19 · Codex · Preview động trên web PASS.** Thay đổi `backend/app/main.py` và `frontend/src/components/InteractiveSandbox.tsx`. Backend tạo APNG từ ANI; Admin cần phiên để xem draft và endpoint public chỉ dùng projection đã publish. HTTP/MySQL kiểm hai khung 100/200 ms theo sequence và quyền tải file ANI giữ nguyên. Chrome đạt chuyển động Busy ở cả Admin và trang chi tiết với phiên User, đúng hotspot, lớp ảnh cho click đi xuyên và biến mất khi rời vùng. CUR giữ nguyên. Build frontend, Ruff, mypy và 74 pytest offline đạt, 23 integration skip theo cấu hình offline. Staging/cài Windows là bước nghiệm thu còn mở.
+
+- **2026-11-19 · Codex · Kích thước preview tĩnh/động PASS.** `frontend/src/components/InteractiveSandbox.tsx` dùng chung lớp ảnh 32×32 px và quy đổi hotspot theo kích thước nguồn. Build frontend đạt. Chrome/MySQL cô lập xác nhận CUR 48 px và ANI 32 px đều hiển thị 32×32, căn đúng hotspot trên Admin và trang chi tiết, rời vùng thì lớp ảnh biến mất. Thay đổi chỉ áp dụng cho Sandbox. Cổng staging và cài Windows vẫn mở.
+
 ## 4. Current Sprint Checklist
 
 **Sprint 1 / Foundation — in progress**

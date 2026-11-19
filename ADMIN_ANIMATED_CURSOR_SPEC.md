@@ -8,7 +8,12 @@
 - Giữ 8 vai trò hiện có và quy trình Draft → Validate → Publish. Mỗi vai trò gắn một file con trỏ và một ảnh preview PNG. Thumbnail của pack dùng luồng hiện tại.
 - **Tĩnh (.cur)** là mặc định cho vai trò mới. Tiếp tục tải PNG, chọn hotspot, tạo hoặc tải CUR, rồi lưu.
 - **Động (.ani)** nhận một file ANI đã chuẩn bị sẵn và một PNG đại diện. Phạm vi hỗ trợ ban đầu là frame CUR một ảnh, DIB 32-bit, cùng kích thước 32×32 hoặc 48×48, cùng hotspot giữa các frame. Đây là tập con do dự án chọn để kiểm soát tương thích và giới hạn tài nguyên.
-- Gallery, chi tiết pack và Sandbox dùng PNG đại diện trên web. Giao diện ghi rõ **Ảnh xem trước tĩnh · Chuyển động khi áp dụng trong Windows**. Trình tạo ANI từ các PNG, trình chỉnh timeline và preview động trên web dành cho đề xuất sau.
+- Gallery và phần chọn asset của Admin dùng PNG đại diện. Sandbox ở Admin và trang chi tiết pack phát preview động khi rê chuột vào role ANI. Trình tạo ANI từ các PNG và trình chỉnh timeline dành cho đề xuất sau.
+
+### Preview động trong Sandbox
+
+- Backend dựng PNG động từ các frame và thời lượng đã được validator ANI xác thực, lưu bộ nhớ đệm giới hạn theo nội dung. Admin đọc preview theo role của bản nháp bằng phiên Admin. Trang chi tiết lấy preview từ role của pack đã xuất bản. File `.ani` gốc tiếp tục theo cổng tải hiện hành.
+- Sandbox dùng cùng khung hiển thị **32×32 CSS px** cho PNG tĩnh và APNG động, rồi quy đổi hotspot theo kích thước ảnh nguồn. Lớp ảnh bám chuột và cho click đi xuyên qua. Sandbox chỉ ẩn con trỏ CSS sau khi lớp ảnh sẵn sàng. Rời vùng hoặc chuyển cửa sổ sẽ dừng phát. Khi APNG tải lỗi hoặc bật giảm chuyển động, Sandbox dùng PNG tĩnh cùng kích thước. Điều kiện đăng nhập để tương tác trên trang chi tiết giữ nguyên.
 
 ## 2. Luồng Admin
 
@@ -63,6 +68,7 @@ Storage key vẫn do server cấp theo pack và UUID. Rà tất cả nơi đang 
 - [x] Validate/Publish và public projection cho pack hỗn hợp. MySQL/HTTP đạt ZIP 15 slot, `Wait → busy.ani`, tải gateway GET/HEAD có phiên User và từ chối khách khi User guard bật. Unpublish chặn tải và publish lại toàn CUR đưa `is_animated` về false.
 - [x] Nối lựa chọn CUR/ANI ở editor và truyền cờ backend qua Compose dev. Chrome/MySQL cô lập đạt chọn ANI, hotspot chỉ xem, lưu, mở lại role, hủy đổi kiểu và thay bằng CUR.
 - [x] Hiển thị **Có con trỏ động** trong danh sách draft dựa trên binding hiện tại. Chrome 390 px + MySQL cô lập đạt gán ANI, mở lại, hủy, đổi về CUR và cập nhật trạng thái.
+- [x] Sandbox Admin và trang chi tiết phát PNG động theo đúng khung và timing khi rê vào role ANI. Chrome/MySQL cô lập đạt căn hotspot, dừng khi rời vùng và giữ nguyên con trỏ tĩnh.
 - [x] Kiểm ZIP thử trên Windows 10 build 19045 bằng Win32. Nạp được CUR và ANI, vẽ được 4 khung hình Busy khác nhau, Wait trỏ đúng `busy.ani`. [LoadImageW](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-loadimagew) · [DrawIconEx](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-drawiconex)
 - [ ] Nghiệm thu staging và cài Áp dụng scheme thật trên Windows 10/11. Lượt kiểm Win32 chỉ nạp ảnh vào bộ nhớ. Máy hiện tại là Windows 10 và chưa có môi trường Windows 11 dùng để kiểm thử.
 

@@ -7,19 +7,24 @@ import logging
 import mimetypes
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from functools import lru_cache
+from io import BytesIO
+from struct import unpack
 from typing import Annotated, Literal
 from uuid import UUID
 
-from anyio import to_thread
-from fastapi import Depends, FastAPI, HTTPException, Request, Response
+from anyio import CapacityLimiter, WouldBlock, to_thread
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Path, Request, Response
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import HTMLResponse, JSONResponse
-from sqlalchemy import text
+from PIL import Image
+from sqlalchemy import select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from starlette.staticfiles import StaticFiles
 from starlette.types import Receive, Scope, Send
 
+from app.api.deps.admin import AdminDatabase, AdminDependency, AuthRoute
 from app.api.deps.user_features import feature_auth_required
 from app.api.v1.admin_assets import router as admin_assets_router
 from app.api.v1.admin_auth import router as admin_auth_router
@@ -31,9 +36,17 @@ from app.api.v1.user_auth import router as user_auth_router
 from app.core.config import Settings
 from app.db.seed import SAMPLES_DIRECTORY, seed_development
 from app.db.session import DatabaseState, database_lifespan, get_db
-from app.models.admin_user import AssetKind
+from app.models.admin_user import AdminAsset, AdminPackRole, AssetKind
+from app.models.cursor_item import CursorItem, CursorRole
+from app.models.cursor_pack import CursorPack, PackStatus
 from app.schemas.admin_pack import MAX_SAFE_ID
-from app.services.admin_assets import ANI_MIME_TYPE, asset_key, private_storage
+from app.services.admin_assets import (
+    ANI_MIME_TYPE,
+    InvalidAsset,
+    asset_key,
+    private_storage,
+)
+from app.services.ani_validator import _chunks, validate_ani_cursor
 from app.services.pack_publisher import (
     managed_prefix,
     published_asset,
@@ -144,6 +157,132 @@ _MEDIA_TYPES = {
     "cur": (AssetKind.CURSOR, "application/octet-stream"),
     "ani": (AssetKind.CURSOR, ANI_MIME_TYPE),
 }
+_ANI_PREVIEWS = CapacityLimiter(2)
+_admin_previews = APIRouter(
+    prefix="/api/v1/admin", include_in_schema=False, route_class=AuthRoute
+)
+
+
+@lru_cache(maxsize=16)
+def _animated_png(data: bytes) -> bytes:
+    """Encode the validated playback sequence as a browser preview."""
+    cursor = validate_ani_cursor(data)
+    chunks = dict(_chunks(memoryview(data)[12:]))
+    # A valid ANI has one frame list and can also include an INFO list.
+    frame_list = next(
+        chunk[4:]
+        for tag, chunk in _chunks(memoryview(data)[12:])
+        if tag == b"LIST" and bytes(chunk[:4]) == b"fram"
+    )
+    size = (cursor.width, cursor.height)
+    end = 62 + cursor.width * cursor.height * 4
+    frames = [
+        Image.frombytes("RGBA", size, bytes(frame[62:end]), "raw", "BGRA", 0, -1)
+        for _, frame in _chunks(frame_list)
+    ]
+    _, _, steps, _, _, _, _, default_rate, _ = unpack("<9I", chunks[b"anih"])
+    sequence = (
+        unpack(f"<{steps}I", chunks[b"seq "]) if b"seq " in chunks else range(steps)
+    )
+    rates = (
+        unpack(f"<{steps}I", chunks[b"rate"])
+        if b"rate" in chunks
+        else (default_rate,) * steps
+    )
+    ordered = [frames[index] for index in sequence]
+    with BytesIO() as output:
+        ordered[0].save(
+            output,
+            format="PNG",
+            save_all=True,
+            append_images=ordered[1:],
+            duration=[round(rate * 1000 / 60) for rate in rates],
+            loop=0,
+            disposal=0,
+            blend=0,
+        )
+        return output.getvalue()
+
+
+async def _animation_response(asset: AdminAsset, settings: Settings) -> Response:
+    try:
+        _ANI_PREVIEWS.acquire_nowait()
+    except WouldBlock:
+        raise HTTPException(status_code=503) from None
+    try:
+        data = await read_published_bytes(private_storage(settings), asset)
+        png = await to_thread.run_sync(_animated_png, data)
+        return Response(content=png, media_type="image/png", headers=_MEDIA_HEADERS)
+    except (AssetNotFound, StorageError, InvalidAsset):
+        raise HTTPException(status_code=404) from None
+    finally:
+        _ANI_PREVIEWS.release()
+
+
+@_admin_previews.get("/packs/{pack_id}/roles/{role}/animation")
+async def admin_cursor_animation(
+    pack_id: Annotated[int, Path(gt=0, le=MAX_SAFE_ID)],
+    role: CursorRole,
+    identity: AdminDependency,
+    db: AdminDatabase,
+) -> Response:
+    async with db.begin():
+        asset = await db.scalar(
+            select(AdminAsset)
+            .join(
+                AdminPackRole,
+                (AdminPackRole.pack_id == AdminAsset.pack_id)
+                & (AdminPackRole.asset_id == AdminAsset.id),
+            )
+            .where(
+                AdminPackRole.pack_id == pack_id,
+                AdminPackRole.role_type == role,
+                AdminAsset.kind == AssetKind.CURSOR,
+                AdminAsset.mime_type == ANI_MIME_TYPE,
+            )
+        )
+    if asset is None:
+        return Response(status_code=204, headers=_MEDIA_HEADERS)
+    return await _animation_response(asset, Settings.model_validate({}))
+
+
+app.include_router(_admin_previews)
+
+
+@app.get("/api/v1/packs/{pack_id}/assets/{role}/animation", include_in_schema=False)
+async def public_cursor_animation(
+    pack_id: Annotated[int, Path(gt=0, le=MAX_SAFE_ID)],
+    role: CursorRole,
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Response:
+    settings = Settings.model_validate({})
+    prefix = managed_prefix(settings)
+    async with db.begin():
+        url = await db.scalar(
+            select(CursorItem.cursor_file_url)
+            .join(CursorPack, CursorPack.id == CursorItem.pack_id)
+            .where(
+                CursorItem.pack_id == pack_id,
+                CursorItem.role_type == role,
+                CursorPack.status == PackStatus.PUBLISHED,
+            )
+        )
+        if (
+            url is None
+            or not url.startswith(prefix + "managed/")
+            or not url.endswith(".ani")
+        ):
+            raise HTTPException(status_code=404)
+        asset = await published_asset(db, pack_id, url[len(prefix) :], url)
+    if asset is None or asset.mime_type != ANI_MIME_TYPE:
+        raise HTTPException(status_code=404)
+    response = await _animation_response(asset, settings)
+    response.headers["Vary"] = "Origin"
+    origin = request.headers.get("origin")
+    if origin is not None and origin in settings.cors_origins:
+        response.headers["Access-Control-Allow-Origin"] = origin
+    return response
 
 
 @app.api_route(

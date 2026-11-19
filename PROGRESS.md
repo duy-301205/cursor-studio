@@ -763,6 +763,7 @@ next_task: T02
 - `npm test` có 80 PASS và 3 skip live. Hai ca Admin bị từ chối origin khi gọi trực tiếp từ Node và một ca User bị rate limit trên dev. `npm run build` PASS. Hồi quy backend U08 có 85 PASS, gồm hợp đồng tải trực tiếp và phân quyền User/Admin.
 - `docker compose -f docker-compose.dev.yml build backend` PASS. Image `custom-cursor-dev-backend:latest` có ID `sha256:92d978b3f4d5e62c3a80d29e003fbd60aaf6865828669de4b7d95c7a00fda20b` và qua `python -m pip check`. Backend dev đang chạy trả `{"status":"ready"}`. Lượt build chỉ cập nhật image.
 - **Kiểm lại sau bản vá frontend.** Chrome 390 và 1440 px trên MySQL cô lập, User guard bật, đạt luồng bấm tải → “Đăng ký ngay” trong form → đăng ký → đăng nhập → đúng pack và query → refresh → tải ZIP. Typecheck đạt và 11/11 ca Auth/Guard đạt. Nhánh Đăng ký ở thanh điều hướng vẫn tạo URL `/register` không có `returnUrl` khi đang ở `/login`; lượt kiểm nhánh này quay về Gallery sau đăng nhập.
+- **Kiểm lại nhánh thanh điều hướng sau commit `c254e08`.** Chrome 1440 px qua liên kết trên header và Chrome 390 px qua menu mobile đều đạt luồng bấm tải → đăng ký → đăng nhập → đúng pack kèm query → refresh → tải ZIP trên MySQL cô lập với User guard bật. `npm run typecheck` đạt. Các điều kiện staging/A15 và duyệt phát hành vẫn mở.
 
 ## 4. Current Sprint Checklist
 

@@ -183,7 +183,7 @@ POST /auth/logout    Cookie User + X-CSRF-Token
 - **Yêu cầu** — Chạy luồng khách → Gallery → bấm tải → đăng ký/đăng nhập → quay lại → tải ZIP. Thử Studio, Mix & Match và share link. Kiểm đăng xuất, refresh, phiên hết hạn, Admin đăng nhập chung chuyển đúng trang và User bị từ chối ở Admin.
 - **Nghiệm thu** — PASS khi luồng desktop/mobile và staging đạt, quyền tải trực tiếp và cache CDN đã kiểm tra, hồi quy Admin/A15 đã được đối chiếu, và chủ dự án duyệt trước khi đưa bản mở rộng lên production.
 
-- **Kết quả kiểm lại 2026-11-19** — Liên kết “Đăng ký ngay” trong form đăng nhập giữ đúng pack và query trên Chrome desktop/mobile. Liên kết Đăng ký ở thanh điều hướng vẫn làm mất đích khi người dùng đang ở trang đăng nhập. U09 còn mở, chờ sửa nhánh này, nghiệm thu staging HTTPS/CDN/R2, đối chiếu đầy đủ A15 và phê duyệt phát hành. Chi tiết trong `PROGRESS.md`, mục 3.4.
+- **Kết quả kiểm lại 2026-11-19** — Cả liên kết “Đăng ký ngay” trong form và liên kết Đăng ký trên thanh điều hướng giữ đúng pack và query trên Chrome desktop/mobile. U09 còn mở, chờ nghiệm thu staging HTTPS/CDN/R2, đối chiếu đầy đủ A15 và phê duyệt phát hành. Chi tiết trong `PROGRESS.md`, mục 3.4.
 
 #### Checklist triển khai và rollback U09
 

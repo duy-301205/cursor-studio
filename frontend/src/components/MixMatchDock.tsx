@@ -24,17 +24,17 @@ import {
   ALL_CURSOR_ROLES,
   countAssignedRoles,
 } from '../features/mix/mixStorage.ts';
-import type { CursorRole } from '../types/api.ts';
+import type { CursorRole, MixRole } from '../types/api.ts';
 
 export interface MixMatchDockProps {
   mix: LocalMixStateV1;
-  onRemove?: (role: CursorRole) => void;
+  onRemove?: (role: MixRole) => void;
   onClear?: () => void;
   onShare?: () => void;
   className?: string;
 }
 
-const ROLE_ICONS: Record<CursorRole, LucideIcon> = {
+const ROLE_ICONS: Record<MixRole, LucideIcon> = {
   pointer: MousePointer,
   link: Hand,
   text: Type,
@@ -45,7 +45,7 @@ const ROLE_ICONS: Record<CursorRole, LucideIcon> = {
   move: Move,
 };
 
-const ROLE_LABELS: Record<CursorRole, string> = {
+const ROLE_LABELS: Record<MixRole, string> = {
   pointer: 'Pointer',
   link: 'Link',
   text: 'Text',

@@ -140,19 +140,28 @@ test('3. Read-only evaluation correctly locks published packs and legacy packs',
   assert.equal(isReadOnlyDraft, false);
 });
 
-test('4. 8 Canonical roles are strictly maintained in correct canonical order', () => {
+test('4. 17 Windows roles are strictly maintained in correct canonical Windows order per CR-20261120-01', () => {
   const expectedRoles: CursorRole[] = [
     'pointer',
-    'link',
-    'text',
-    'busy',
+    'help',
     'working',
+    'busy',
     'precision',
+    'text',
+    'handwriting',
     'unavailable',
+    'resize_vertical',
+    'resize_horizontal',
+    'resize_diagonal_nwse',
+    'resize_diagonal_nesw',
     'move',
+    'alternate',
+    'link',
+    'location',
+    'person',
   ];
 
-  assert.equal(CURSOR_ROLES.length, 8);
+  assert.equal(CURSOR_ROLES.length, 17);
   for (let i = 0; i < expectedRoles.length; i++) {
     assert.equal(CURSOR_ROLES[i], expectedRoles[i]);
   }

@@ -9,6 +9,15 @@ import {
   Crosshair,
   Ban,
   Move,
+  HelpCircle,
+  PenTool,
+  ArrowUpDown,
+  ArrowLeftRight,
+  MoveDiagonal,
+  MoveDiagonal2,
+  ArrowUp,
+  MapPin,
+  User,
   Upload,
   CheckCircle2,
   AlertCircle,
@@ -57,47 +66,101 @@ const ROLE_METADATA: Record<
     desc: 'Con trỏ mũi tên mặc định dùng để di chuyển và trỏ',
     icon: MousePointer,
   },
+  help: {
+    label: 'Trợ giúp',
+    enLabel: 'Help Select (Help)',
+    desc: 'Con trỏ mũi tên kèm dấu hỏi khi cần trợ giúp',
+    icon: HelpCircle,
+  },
+  working: {
+    label: 'Đang xử lý nền',
+    enLabel: 'Working in Background (AppStarting)',
+    desc: 'Mũi tên kèm đồng hồ cát/vòng xoay khi tác vụ nền đang chạy',
+    icon: Clock,
+  },
+  busy: {
+    label: 'Đang bận',
+    enLabel: 'Busy (Wait)',
+    desc: 'Biểu tượng đồng hồ cát hoặc vòng xoay khi hệ thống bận',
+    icon: Hourglass,
+  },
+  precision: {
+    label: 'Căn chỉnh chính xác',
+    enLabel: 'Precision Select (Crosshair)',
+    desc: 'Tâm ngắm chữ thập dùng trong đồ họa hoặc kỹ thuật',
+    icon: Crosshair,
+  },
+  text: {
+    label: 'Soạn thảo văn bản',
+    enLabel: 'Text Select (IBeam)',
+    desc: 'Hình chữ I khi di chuột qua đoạn văn hoặc ô nhập liệu',
+    icon: Type,
+  },
+  handwriting: {
+    label: 'Viết tay',
+    enLabel: 'Handwriting (NWPen)',
+    desc: 'Bút viết tay dùng khi vẽ hoặc ghi chú',
+    icon: PenTool,
+  },
+  unavailable: {
+    label: 'Không khả dụng',
+    enLabel: 'Unavailable (No)',
+    desc: 'Biểu tượng cấm vòng tròn gạch chéo khi không thể thao tác',
+    icon: Ban,
+  },
+  resize_vertical: {
+    label: 'Thay đổi kích thước dọc',
+    enLabel: 'Vertical Resize (SizeNS)',
+    desc: 'Mũi tên 2 chiều dọc điều chỉnh chiều cao cửa sổ',
+    icon: ArrowUpDown,
+  },
+  resize_horizontal: {
+    label: 'Thay đổi kích thước ngang',
+    enLabel: 'Horizontal Resize (SizeWE)',
+    desc: 'Mũi tên 2 chiều ngang điều chỉnh chiều rộng cửa sổ',
+    icon: ArrowLeftRight,
+  },
+  resize_diagonal_nwse: {
+    label: 'Thay đổi kích thước chéo 1',
+    enLabel: 'Diagonal Resize 1 (SizeNWSE)',
+    desc: 'Mũi tên 2 chiều chéo góc Tây Bắc - Đông Nam',
+    icon: MoveDiagonal,
+  },
+  resize_diagonal_nesw: {
+    label: 'Thay đổi kích thước chéo 2',
+    enLabel: 'Diagonal Resize 2 (SizeNESW)',
+    desc: 'Mũi tên 2 chiều chéo góc Đông Bắc - Tây Nam',
+    icon: MoveDiagonal2,
+  },
+  move: {
+    label: 'Di chuyển',
+    enLabel: 'Move (SizeAll)',
+    desc: 'Mũi tên 4 hướng khi kéo thả hoặc di chuyển cửa sổ/vật thể',
+    icon: Move,
+  },
+  alternate: {
+    label: 'Lựa chọn thay thế',
+    enLabel: 'Alternate Select (UpArrow)',
+    desc: 'Mũi tên hướng lên trên dùng cho thao tác thay thế',
+    icon: ArrowUp,
+  },
   link: {
     label: 'Liên kết',
     enLabel: 'Link Select (Hand)',
     desc: 'Bàn tay trỏ khi rê chuột qua liên kết hoặc nút bấm',
     icon: Link2,
   },
-  text: {
-    label: 'Soạn thảo văn bản',
-    enLabel: 'Text Select (I-Beam)',
-    desc: 'Hình chữ I khi di chuột qua đoạn văn hoặc ô nhập liệu',
-    icon: Type,
+  location: {
+    label: 'Chọn vị trí',
+    enLabel: 'Location Select (Pin)',
+    desc: 'Biểu tượng ghim định vị dùng để ghim bản đồ hoặc vị trí',
+    icon: MapPin,
   },
-  busy: {
-    label: 'Đang bận',
-    enLabel: 'Busy / Wait',
-    desc: 'Biểu tượng đồng hồ cát hoặc vòng xoay khi hệ thống bận',
-    icon: Hourglass,
-  },
-  working: {
-    label: 'Đang xử lý nền',
-    enLabel: 'Working in Background',
-    desc: 'Mũi tên kèm đồng hồ cát khi tác vụ nền đang chạy',
-    icon: Clock,
-  },
-  precision: {
-    label: 'Căn chỉnh chính xác',
-    enLabel: 'Precision Select (Crosshair)',
-    desc: 'Tâm ngắm chữ thập dùng trong đồ họa hoặc vẽ kỹ thuật',
-    icon: Crosshair,
-  },
-  unavailable: {
-    label: 'Không khả dụng',
-    enLabel: 'Unavailable / Forbidden',
-    desc: 'Biểu tượng cấm vòng tròn gạch chéo khi không thể thao tác',
-    icon: Ban,
-  },
-  move: {
-    label: 'Di chuyển',
-    enLabel: 'Move (4-way Arrow)',
-    desc: 'Mũi tên 4 hướng khi kéo thả hoặc di chuyển cửa sổ/vật thể',
-    icon: Move,
+  person: {
+    label: 'Chọn người dùng',
+    enLabel: 'Person Select (Person)',
+    desc: 'Biểu tượng người dùng chọn liên hệ hoặc tài khoản',
+    icon: User,
   },
 };
 
@@ -437,10 +500,12 @@ export const RoleAssetEditor: React.FC<RoleAssetEditorProps> = ({
         <div>
           <div className="flex items-center gap-2">
             <Layers className="w-5 h-5 text-brand" />
-            <h3 className="font-semibold text-ink text-base">8 Canonical Cursor Roles</h3>
+            <h3 className="font-semibold text-ink text-base">
+              {CURSOR_ROLES.length} Windows Cursor Roles
+            </h3>
           </div>
           <p className="text-xs text-muted mt-1">
-            Quy chuẩn Windows 10 &amp; 11: Mỗi pack cần gán đủ 8 role chuẩn để được xuất bản (Publish).
+            Quy chuẩn Windows 10 &amp; 11: Mỗi pack cần gán đủ {CURSOR_ROLES.length} vị trí chuẩn để được xuất bản (Publish).
           </p>
         </div>
 
@@ -448,21 +513,21 @@ export const RoleAssetEditor: React.FC<RoleAssetEditorProps> = ({
           <div className="text-right">
             <span className="text-xs font-medium text-muted block">Tiến độ gán role</span>
             <span className="text-sm font-bold text-ink">
-              {assignedCount} / 8 Roles
+              {assignedCount} / {CURSOR_ROLES.length} Roles
             </span>
           </div>
           <div className="w-16 bg-raised rounded-full h-2.5 overflow-hidden border border-line">
             <div
               className={`h-full transition-all duration-300 ${
-                assignedCount === 8 ? 'bg-emerald-500' : 'bg-brand'
+                assignedCount === CURSOR_ROLES.length ? 'bg-emerald-500' : 'bg-brand'
               }`}
-              style={{ width: `${(assignedCount / 8) * 100}%` }}
+              style={{ width: `${(assignedCount / CURSOR_ROLES.length) * 100}%` }}
             />
           </div>
         </div>
       </div>
 
-      {/* 8-Role Grid */}
+      {/* 17-Role Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {CURSOR_ROLES.map((roleKey) => {
           const meta = ROLE_METADATA[roleKey];

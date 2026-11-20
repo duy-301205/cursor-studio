@@ -9,7 +9,7 @@ import {
   type MixSlotItem,
   type LocalMixStateV1,
 } from '../features/mix/mixStorage.ts';
-import { createShare, getShare, ApiError } from '../lib/api.ts';
+import { createShare, getShare, getPacks, ApiError } from '../lib/api.ts';
 
 // Mock localStorage for Node environment if not present
 if (typeof globalThis.localStorage === 'undefined') {
@@ -148,14 +148,23 @@ test('toShareConfig — strips local UI URLs and dates, outputting strict ShareC
 });
 
 test('createShare and getShare — live backend integration test for shared presets', async () => {
-  // Use pack_id: 1 or 2 (seeded in Docker) with valid roles
+  let validPackId = 1;
+  try {
+    const packsRes = await getPacks({ limit: 1 });
+    if (packsRes.items.length > 0 && packsRes.items[0]?.id) {
+      validPackId = packsRes.items[0].id;
+    }
+  } catch {
+    // fallback
+  }
+
   const payload = {
     title: 'Integration Test Preset',
     config: {
       version: 1 as const,
       roles: {
-        pointer: { pack_id: 1, role_type: 'pointer' as const },
-        link: { pack_id: 1, role_type: 'link' as const },
+        pointer: { pack_id: validPackId, role_type: 'pointer' as const },
+        link: { pack_id: validPackId, role_type: 'link' as const },
       },
     },
   };
@@ -174,7 +183,7 @@ test('createShare and getShare — live backend integration test for shared pres
 
   const pointerItem = sharedView.resolved_items.find((i) => i.target_role === 'pointer');
   assert.ok(pointerItem);
-  assert.equal(pointerItem?.pack_id, 1);
+  assert.equal(pointerItem?.pack_id, validPackId);
   assert.ok(pointerItem?.preview_png_url);
 
   // Verify non-existent share code returns 404

@@ -418,7 +418,7 @@ export const PublishChecklist: React.FC<PublishChecklistProps> = ({
               </span>
             </div>
 
-            {/* Checklist Item 3: 8 Canonical Roles */}
+            {/* Checklist Item 3: 17 Windows Roles */}
             <div className="p-3.5 rounded-xl bg-canvas border border-line flex items-center justify-between text-xs">
               <div className="flex items-center gap-2.5">
                 {hasAllRoles ? (
@@ -427,9 +427,9 @@ export const PublishChecklist: React.FC<PublishChecklistProps> = ({
                   <XCircle className="w-4 h-4 text-amber-500 shrink-0" />
                 )}
                 <div>
-                  <span className="font-semibold text-ink block">Đủ 8 Roles Canonical</span>
+                  <span className="font-semibold text-ink block">Đủ {CURSOR_ROLES.length} Vị Trí Windows</span>
                   <span className="text-[11px] text-muted">
-                    {assignedRoles.size} / 8 roles chuẩn Windows đã được gán
+                    {assignedRoles.size} / {CURSOR_ROLES.length} vị trí chuẩn Windows đã được gán
                   </span>
                 </div>
               </div>
@@ -440,7 +440,7 @@ export const PublishChecklist: React.FC<PublishChecklistProps> = ({
                     : 'bg-amber-500/10 text-amber-600'
                 }`}
               >
-                {hasAllRoles ? 'ĐẠT' : `${assignedRoles.size}/8`}
+                {hasAllRoles ? 'ĐẠT' : `${assignedRoles.size}/${CURSOR_ROLES.length}`}
               </span>
             </div>
 

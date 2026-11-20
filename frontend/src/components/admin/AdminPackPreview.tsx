@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Sparkles, Eye, Info, Crosshair } from 'lucide-react';
 import type { CursorAsset, CursorRole } from '../../types/api.ts';
+import { MIX_CURSOR_ROLES } from '../../types/api.ts';
 import type { AdminPackDetail, AdminPackRole } from '../../types/admin.ts';
 import { InteractiveSandbox } from '../InteractiveSandbox.tsx';
 
@@ -34,7 +35,9 @@ export const AdminPackPreview: React.FC<AdminPackPreviewProps> = ({
     return map;
   }, [roles]);
 
-  const assignedCount = Object.keys(rolePreviews).length;
+  const sandboxAssignedCount = useMemo(() => {
+    return MIX_CURSOR_ROLES.filter((r) => Boolean(rolePreviews[r])).length;
+  }, [rolePreviews]);
 
   return (
     <div className={`space-y-4 ${className}`}>
@@ -56,7 +59,7 @@ export const AdminPackPreview: React.FC<AdminPackPreviewProps> = ({
 
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium text-muted">
-            {assignedCount} / 8 Roles sẵn sàng trải nghiệm
+            {sandboxAssignedCount} / 8 Sandbox Roles sẵn sàng trải nghiệm
           </span>
         </div>
       </div>

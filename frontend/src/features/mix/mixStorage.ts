@@ -10,11 +10,11 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import type { CursorRole, ShareConfig, ShareSource } from '../../types/api';
+import type { CursorRole, MixRole, ShareConfig, ShareSource } from '../../types/api';
 
 export const MIX_STORAGE_KEY = 'ccs.mix.v1';
 
-export const ALL_CURSOR_ROLES: readonly CursorRole[] = [
+export const ALL_CURSOR_ROLES: readonly MixRole[] = [
   'pointer',
   'link',
   'text',
@@ -39,7 +39,7 @@ export interface MixSlotItem {
 export interface LocalMixStateV1 {
   version: 1;
   title: string;
-  roles: Partial<Record<CursorRole, MixSlotItem>>;
+  roles: Partial<Record<MixRole, MixSlotItem>>;
   updatedAt: string;
 }
 
@@ -74,7 +74,7 @@ export function loadLocalMix(): LocalMixStateV1 {
       return createEmptyMix();
     }
 
-    const validatedRoles: Partial<Record<CursorRole, MixSlotItem>> = {};
+    const validatedRoles: Partial<Record<MixRole, MixSlotItem>> = {};
     const rolesObj = parsed.roles;
 
     for (const role of ALL_CURSOR_ROLES) {
@@ -169,7 +169,7 @@ export function toShareConfig(mix: LocalMixStateV1): ShareConfig {
 /**
  * Count how many of the 8 roles are currently assigned.
  */
-export function countAssignedRoles(roles: Partial<Record<CursorRole, MixSlotItem>>): number {
+export function countAssignedRoles(roles: Partial<Record<MixRole, MixSlotItem>>): number {
   return Object.keys(roles).length;
 }
 
@@ -193,7 +193,7 @@ export function useLocalMix() {
     };
   }, []);
 
-  const assignRole = useCallback((targetRole: CursorRole, item: MixSlotItem) => {
+  const assignRole = useCallback((targetRole: MixRole, item: MixSlotItem) => {
     setMix((prev) => {
       const nextRoles = { ...prev.roles, [targetRole]: item };
       const nextMix: LocalMixStateV1 = {
@@ -206,7 +206,7 @@ export function useLocalMix() {
     });
   }, []);
 
-  const removeRole = useCallback((targetRole: CursorRole) => {
+  const removeRole = useCallback((targetRole: MixRole) => {
     setMix((prev) => {
       const nextRoles = { ...prev.roles };
       delete nextRoles[targetRole];

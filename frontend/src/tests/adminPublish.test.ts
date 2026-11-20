@@ -72,9 +72,11 @@ test('2. 8 Canonical roles verification detects missing roles accurately', () =>
   );
 
   const missingRoles = CURSOR_ROLES.filter((r) => !assignedSet.has(r));
-  assert.equal(missingRoles.length, 6);
+  assert.equal(missingRoles.length, 15);
   assert.ok(missingRoles.includes('text'));
   assert.ok(missingRoles.includes('busy'));
+  assert.ok(missingRoles.includes('location'));
+  assert.ok(missingRoles.includes('person'));
   assert.ok(!missingRoles.includes('pointer'));
   assert.ok(!missingRoles.includes('link'));
 });

@@ -35,14 +35,16 @@ import {
 import { InteractiveSandbox } from '../../components/InteractiveSandbox.tsx';
 import type {
   CursorRole,
+  MixRole,
   CursorAsset,
   PackCard,
   PackDetail,
   ShareView,
   ResolvedItem,
 } from '../../types/api.ts';
+import { isMixRole } from '../../types/api.ts';
 
-const ROLE_DISPLAY_NAMES: Record<CursorRole, string> = {
+const ROLE_DISPLAY_NAMES: Record<MixRole, string> = {
   pointer: 'Normal Select (Pointer)',
   link: 'Link Select',
   text: 'Text Select',
@@ -77,7 +79,7 @@ export const MixPage: React.FC = () => {
 
   // --- Catalog packs for quick assignment picker ---
   const [availablePacks, setAvailablePacks] = useState<PackCard[]>([]);
-  const [pickerOpenRole, setPickerOpenRole] = useState<CursorRole | null>(null);
+  const [pickerOpenRole, setPickerOpenRole] = useState<MixRole | null>(null);
   const [selectedPackDetail, setSelectedPackDetail] = useState<PackDetail | null>(null);
   const [loadingPackDetail, setLoadingPackDetail] = useState<boolean>(false);
 
@@ -191,17 +193,19 @@ export const MixPage: React.FC = () => {
   const handleUseSharedMix = () => {
     if (!sharedPreset) return;
 
-    const newRoles: Partial<Record<CursorRole, MixSlotItem>> = {};
+    const newRoles: Partial<Record<MixRole, MixSlotItem>> = {};
     for (const item of sharedPreset.resolved_items) {
-      newRoles[item.target_role] = {
-        pack_id: item.pack_id,
-        pack_title: item.pack_title,
-        pack_slug: '',
-        role_type: item.role_type,
-        preview_png_url: item.preview_png_url,
-        hotspot_x: item.hotspot_x,
-        hotspot_y: item.hotspot_y,
-      };
+      if (isMixRole(item.target_role)) {
+        newRoles[item.target_role] = {
+          pack_id: item.pack_id,
+          pack_title: item.pack_title,
+          pack_slug: '',
+          role_type: item.role_type,
+          preview_png_url: item.preview_png_url,
+          hotspot_x: item.hotspot_x,
+          hotspot_y: item.hotspot_y,
+        };
+      }
     }
 
     const appliedMix: LocalMixStateV1 = {

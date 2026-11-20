@@ -4,19 +4,52 @@
  */
 
 /**
- * The 8 canonical product roles for custom cursors.
+ * The 17 Windows cursor roles per CR-20261120-01 and ARCHITECTURE.md.
+ * Ordered according to Windows Registry slots / Mouse Properties scheme.
  */
 export type CursorRole =
   | 'pointer'
-  | 'link'
-  | 'text'
-  | 'busy'
+  | 'help'
   | 'working'
+  | 'busy'
   | 'precision'
+  | 'text'
+  | 'handwriting'
   | 'unavailable'
-  | 'move';
+  | 'resize_vertical'
+  | 'resize_horizontal'
+  | 'resize_diagonal_nwse'
+  | 'resize_diagonal_nesw'
+  | 'move'
+  | 'alternate'
+  | 'link'
+  | 'location'
+  | 'person';
 
 export const CURSOR_ROLES: readonly CursorRole[] = [
+  'pointer',
+  'help',
+  'working',
+  'busy',
+  'precision',
+  'text',
+  'handwriting',
+  'unavailable',
+  'resize_vertical',
+  'resize_horizontal',
+  'resize_diagonal_nwse',
+  'resize_diagonal_nesw',
+  'move',
+  'alternate',
+  'link',
+  'location',
+  'person',
+] as const;
+
+/**
+ * The 8 legacy product roles supported by Mix & Match and Sandbox per contract v1.
+ */
+export const MIX_CURSOR_ROLES = [
   'pointer',
   'link',
   'text',
@@ -26,6 +59,12 @@ export const CURSOR_ROLES: readonly CursorRole[] = [
   'unavailable',
   'move',
 ] as const;
+
+export type MixRole = (typeof MIX_CURSOR_ROLES)[number];
+
+export function isMixRole(role: string): role is MixRole {
+  return (MIX_CURSOR_ROLES as readonly string[]).includes(role);
+}
 
 /**
  * Category Reference DTO

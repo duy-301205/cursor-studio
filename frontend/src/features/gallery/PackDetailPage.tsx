@@ -19,16 +19,29 @@ import { InteractiveSandbox } from '../../components/InteractiveSandbox';
 import { useLocalMix } from '../mix/mixStorage';
 import { useUserAuth } from '../../components/UserAuthProvider.tsx';
 import type { PackDetail, CursorAsset, CursorRole, PackCursor } from '../../types/api';
+import { CURSOR_ROLES, isMixRole } from '../../types/api';
 
-const ROLE_DISPLAY_NAMES: Record<CursorRole, { name: string; slot: string; description: string }> = {
+const ROLE_DISPLAY_NAMES: Record<
+  CursorRole,
+  { name: string; slot: string; description: string }
+> = {
   pointer: { name: 'Normal Select', slot: 'Arrow', description: 'Standard desktop pointer' },
-  link: { name: 'Link Select', slot: 'Hand', description: 'Clickable links and buttons' },
-  text: { name: 'Text Select', slot: 'IBeam', description: 'Text caret and selection' },
-  busy: { name: 'Busy', slot: 'Wait', description: 'System waiting or processing' },
+  help: { name: 'Help Select', slot: 'Help', description: 'Help selection pointer' },
   working: { name: 'Working in Background', slot: 'AppStarting', description: 'Background activity' },
+  busy: { name: 'Busy', slot: 'Wait', description: 'System waiting or processing' },
   precision: { name: 'Precision Select', slot: 'Crosshair', description: 'Fine pixel targeting' },
+  text: { name: 'Text Select', slot: 'IBeam', description: 'Text caret and selection' },
+  handwriting: { name: 'Handwriting', slot: 'NWPen', description: 'Handwriting stylus and pen' },
   unavailable: { name: 'Unavailable', slot: 'No', description: 'Disabled / forbidden actions' },
-  move: { name: 'Move / Resize', slot: 'SizeAll', description: 'Omnidirectional window move' },
+  resize_vertical: { name: 'Vertical Resize', slot: 'SizeNS', description: 'Up-down vertical resize' },
+  resize_horizontal: { name: 'Horizontal Resize', slot: 'SizeWE', description: 'Left-right horizontal resize' },
+  resize_diagonal_nwse: { name: 'Diagonal Resize 1', slot: 'SizeNWSE', description: 'Northwest-southeast resize' },
+  resize_diagonal_nesw: { name: 'Diagonal Resize 2', slot: 'SizeNESW', description: 'Northeast-southwest resize' },
+  move: { name: 'Move', slot: 'SizeAll', description: 'Omnidirectional window move' },
+  alternate: { name: 'Alternate Select', slot: 'UpArrow', description: 'Upward pointing alternate arrow' },
+  link: { name: 'Link Select', slot: 'Hand', description: 'Clickable links and buttons' },
+  location: { name: 'Location Select', slot: 'Pin', description: 'Location pin select' },
+  person: { name: 'Person Select', slot: 'Person', description: 'Person / contact select' },
 };
 
 export function PackDetailPage(): React.ReactElement {
@@ -103,6 +116,18 @@ export function PackDetailPage(): React.ReactElement {
       map[item.role_type] = item;
     }
     return map;
+  }, [pack?.cursor_items]);
+
+  // Sorted cursor items per Windows canonical Registry order
+  const sortedCursorItems = useMemo<PackCursor[]>(() => {
+    if (!pack?.cursor_items) return [];
+    const orderMap = new Map<CursorRole, number>();
+    CURSOR_ROLES.forEach((r, idx) => orderMap.set(r, idx));
+    return [...pack.cursor_items].sort((a, b) => {
+      const orderA = orderMap.get(a.role_type) ?? 999;
+      const orderB = orderMap.get(b.role_type) ?? 999;
+      return orderA - orderB;
+    });
   }, [pack?.cursor_items]);
 
   // Handle ZIP Download via backend API
@@ -286,11 +311,11 @@ export function PackDetailPage(): React.ReactElement {
               </div>
               <div className="flex items-center gap-1.5">
                 <FileText className="w-4 h-4" />
-                <span>15-slot Registry scheme (Install.inf)</span>
+                <span>17-slot Registry scheme (Install.inf)</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                <span>8 verified product roles</span>
+                <span>{pack.cursor_items.length} verified Windows roles</span>
               </div>
             </div>
           </div>
@@ -364,23 +389,24 @@ export function PackDetailPage(): React.ReactElement {
       </section>
 
       {/* ============================================================ */}
-      {/* 3. 8 Cursor Role Items Gallery                               */}
+      {/* 3. Included Windows Cursor Roles Gallery                    */}
       {/* ============================================================ */}
       <section className="space-y-4">
         <div>
-          <h2 className="text-2xl font-bold text-ink">Included Cursors (8 Roles)</h2>
+          <h2 className="text-2xl font-bold text-ink">Included Cursors ({sortedCursorItems.length} Roles)</h2>
           <p className="text-sm text-muted">
             Each cursor file is encoded according to the official Windows DIB CUR binary format.
           </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {pack.cursor_items.map((item: PackCursor) => {
+          {sortedCursorItems.map((item: PackCursor) => {
             const roleInfo = ROLE_DISPLAY_NAMES[item.role_type] || {
               name: item.role_type,
               slot: item.role_type,
               description: 'Custom role asset',
             };
+            const mixRole = isMixRole(item.role_type) ? item.role_type : null;
 
             return (
               <div
@@ -418,37 +444,43 @@ export function PackDetailPage(): React.ReactElement {
                 {/* Role Footnote & Add to Mix Action */}
                 <div className="pt-2 border-t border-line/60 flex items-center justify-between text-[11px] text-muted">
                   <span>{item.cursor_file_url.endsWith('.ani') ? '.ani dynamic' : '.cur static'}</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!isAuthenticated) {
-                        const returnUrl = encodeURIComponent(location.pathname + location.search);
-                        navigate(`/login?returnUrl=${returnUrl}`);
-                        return;
-                      }
-                      assignRole(item.role_type, {
-                        pack_id: pack.id,
-                        pack_title: pack.title,
-                        pack_slug: pack.slug,
-                        role_type: item.role_type,
-                        preview_png_url: item.preview_png_url,
-                        cursor_file_url: item.cursor_file_url,
-                        hotspot_x: item.hotspot_x,
-                        hotspot_y: item.hotspot_y,
-                      });
-                      setAddedRoleToast(`Added ${roleInfo.name} to Mix & Match dock!`);
-                      setTimeout(() => setAddedRoleToast(null), 3000);
-                    }}
-                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold transition-colors ${
-                      mix.roles[item.role_type]?.pack_id === pack.id
-                        ? 'bg-brand text-white'
-                        : 'bg-brand-soft text-brand hover:bg-brand/20'
-                    }`}
-                    title={`Add this ${roleInfo.name} cursor to your Mix & Match dock`}
-                  >
-                    <Plus className="w-3 h-3" />
-                    <span>{mix.roles[item.role_type]?.pack_id === pack.id ? 'In Mix' : 'Add to Mix'}</span>
-                  </button>
+                  {mixRole ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!isAuthenticated) {
+                          const returnUrl = encodeURIComponent(location.pathname + location.search);
+                          navigate(`/login?returnUrl=${returnUrl}`);
+                          return;
+                        }
+                        assignRole(mixRole, {
+                          pack_id: pack.id,
+                          pack_title: pack.title,
+                          pack_slug: pack.slug,
+                          role_type: item.role_type,
+                          preview_png_url: item.preview_png_url,
+                          cursor_file_url: item.cursor_file_url,
+                          hotspot_x: item.hotspot_x,
+                          hotspot_y: item.hotspot_y,
+                        });
+                        setAddedRoleToast(`Added ${roleInfo.name} to Mix & Match dock!`);
+                        setTimeout(() => setAddedRoleToast(null), 3000);
+                      }}
+                      className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold transition-colors ${
+                        mix.roles[mixRole]?.pack_id === pack.id
+                          ? 'bg-brand text-white'
+                          : 'bg-brand-soft text-brand hover:bg-brand/20'
+                      }`}
+                      title={`Add this ${roleInfo.name} cursor to your Mix & Match dock`}
+                    >
+                      <Plus className="w-3 h-3" />
+                      <span>{mix.roles[mixRole]?.pack_id === pack.id ? 'In Mix' : 'Add to Mix'}</span>
+                    </button>
+                  ) : (
+                    <span className="text-[10px] text-muted font-mono italic">
+                      Windows slot
+                    </span>
+                  )}
                 </div>
               </div>
             );

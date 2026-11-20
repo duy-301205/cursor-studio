@@ -5,8 +5,8 @@
 - [x] CR-20261120-01A — Codex cập nhật ZIP/INF, xác minh 17 vị trí và đường dẫn hợp lệ cho bốn bộ hiện có.
 - [x] CR-20261120-01B — Codex mở rộng enum và migration, giữ các vai trò, ID và tài sản gốc. API Admin gán đủ 17 vị trí, catalog trả đủ dữ liệu sau khi publish.
 - [x] CR-20261120-01C — Codex cập nhật seed dev, giữ hợp đồng Mix/Share v1 và xác minh tệp riêng qua vòng đời Admin, catalog và ZIP.
-- [ ] Antigravity cập nhật Admin và trang chi tiết bộ theo contract đã chốt.
-- [ ] Kiểm thử cài đặt trên Windows và xác minh đủ 17 vị trí có thể gán độc lập.
+- [x] Antigravity cập nhật Admin và trang chi tiết bộ theo contract đã chốt.
+- [ ] Kiểm thử cài đặt trên Windows và xác minh đủ 17 vị trí có thể gán độc lập (để mở cho Windows QA thủ công).
 
 > **Plan version:** 1.0 | **Total:** 25 atomic tasks / 4 phases | **Start state:** all TODO  
 > **Primary implementation principle:** 1 task = 1 small outcome = maximum 1–2 **primary code/config files**. Generated skeleton/lockfiles are allowed during scaffold tasks, but must be listed in task report.  

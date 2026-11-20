@@ -31,6 +31,9 @@ from app.services.storage import StorageError, _base_url, _key_from_url
 MAX_SHARE_BYTES = 8 * 1024
 _BASE62 = ascii_letters + digits
 _SHARE_CODE = re.compile(r"[A-Za-z0-9]{8,12}")
+ShareRole = Literal[
+    "pointer", "link", "text", "busy", "working", "precision", "unavailable", "move"
+]
 
 
 class ShareError(Exception):
@@ -44,14 +47,14 @@ class ShareSource(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     pack_id: int = Field(strict=True, gt=0, le=(1 << 64) - 1)
-    role_type: CursorRole
+    role_type: ShareRole
 
 
 class ShareConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     version: Literal[1]
-    roles: dict[CursorRole, ShareSource] = Field(min_length=1, max_length=8)
+    roles: dict[ShareRole, ShareSource] = Field(min_length=1, max_length=8)
 
     @field_validator("version", mode="before")
     @classmethod

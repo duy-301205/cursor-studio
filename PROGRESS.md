@@ -797,6 +797,22 @@ next_task: T02
 
 **Rules for sprint updates:** mỗi phiên chỉ tick những mục đã có bằng chứng. Nếu phát hiện việc ngoài scope, ghi Proposed Task/CR, không mở rộng Txx.
 
+### CR-20261120-01 — 17 vị trí con trỏ Windows
+
+- **Proposed by:** Codex, theo yêu cầu của chủ dự án.
+- **Old behavior:** 8 loại cấu hình, xuất 15 vị trí Windows bằng cách dùng chung một số con trỏ.
+- **New behavior:** 17 vị trí có thể gán tài sản riêng trong Admin, hiển thị ở chi tiết bộ và xuất đúng vào `Install.inf`. Bổ sung Help, Handwriting, bốn hướng Resize, Alternate, Location và Person.
+- **Why required:** Cho phép tạo bộ con trỏ có đủ các vị trí như trong Mouse Properties của người dùng.
+- **Affected endpoints / DTOs / DB / UI:** Enum và dữ liệu gán vai trò, API Admin và catalog, trình đóng gói ZIP/INF, giao diện Admin và chi tiết bộ. Giữ hợp đồng Mix/Share v1 cho preset hiện có. Codex phụ trách backend, Antigravity phụ trách frontend sau khi chốt contract.
+- **Backward compatibility:** Giữ ID, slug và tài sản của bốn bộ đã xuất bản. Dùng ánh xạ hiện tại cho Help, Handwriting, Alternate và Resize. Đề xuất dùng Link làm mặc định cho Location và Person trên bộ cũ. Cho phép thay từng vị trí bằng tệp riêng. Bộ mới cần đủ 17 vị trí khi xuất bản.
+- **Migration and rollback:** Lập migration có thể đảo ngược, giữ nguyên dữ liệu 8 loại gốc và tệp tài sản. Kiểm tra ZIP, các đường dẫn trong INF và cài thử trên Windows trước khi đánh dấu PASS.
+- **Approval:** Chủ dự án đã duyệt phương án tương thích và yêu cầu triển khai.
+- **2026-11-20 — CR-20261120-01A:** Hoàn thành ZIP/INF trong hai file chính `inf_builder.py` và `zip_packager.py`. Docker pytest 75 PASS, 23 skip. Ruff format PASS. Ruff lint PASS khi bỏ EXE002 do quyền executable trên bind mount Windows. Health ready 200. Tải ZIP qua API cho cả bốn bộ và xác minh đủ 17 đường dẫn trỏ tới tài sản trong ZIP. Chưa cài thử trên Windows.
+- **2026-11-20 — CR-20261120-01B/C PASS:** `0004_windows_cursor_roles` mở rộng hai cột enum. Admin gán và xác thực từng vị trí riêng, publish yêu cầu đủ 17, catalog và OpenAPI công bố đủ 17. Mix/Share v1 giữ 8 vai trò. Seed dev tạo đủ 17 bản ghi cho mỗi bộ mẫu; ZIP dùng lại tệp khi trùng URL nguồn tương thích.
+- **Kiểm thử:** Ruff check và format cho các tệp đã sửa PASS (bỏ EXE002 do Windows bind mount). Mypy 6 tệp nguồn PASS. Pytest trên MySQL cách ly với Admin và User workers 98 PASS. Shell bọc lệnh báo ký tự CR cuối dòng sau khi pytest đã chạy xong. Migration MySQL thử trên dữ liệu seed 34 → 16 → 34, giữ nguyên ID/tài sản gốc. Migration local giữ 5 bộ, 40 cursor items và 40 gán Admin gốc, bổ sung 45 bản ghi cho mỗi bảng vai trò.
+- **Local:** Docker Compose config và dev build PASS. Container đã chạy lại với `AUTO_SEED=false`. Readiness 200. Kiểm tra các bộ Midnight Soots, Letters to the Sky, Little Witch’s Desk và Whispering Woods đều trả 17 vai trò và ZIP có 17 đường dẫn hợp lệ.
+- **Tiếp theo:** Antigravity cập nhật Admin, kiểu dữ liệu và trang chi tiết theo `ARCHITECTURE.md` mục CR-20261120-01. Sau khi tích hợp giao diện, kiểm thử cài đặt và gán trên Windows. Phần backend của CR đã hoàn tất.
+
 ## 5. Known Issues & Resolutions (Debugging Log)
 
 ### 5.1 Reusable issue template

@@ -55,7 +55,7 @@ unavailable.cur
 move.cur
 
 [CursorScheme]
-HKCU,"Control Panel\Cursors\Schemes","%SCHEME_NAME%",0x00000000,"%10%\%CUR_DIR%\pointer.cur,%10%\%CUR_DIR%\pointer.cur,%10%\%CUR_DIR%\working.ani,%10%\%CUR_DIR%\busy.ani,%10%\%CUR_DIR%\precision.cur,%10%\%CUR_DIR%\text.cur,%10%\%CUR_DIR%\pointer.cur,%10%\%CUR_DIR%\unavailable.cur,%10%\%CUR_DIR%\move.cur,%10%\%CUR_DIR%\move.cur,%10%\%CUR_DIR%\move.cur,%10%\%CUR_DIR%\move.cur,%10%\%CUR_DIR%\move.cur,%10%\%CUR_DIR%\pointer.cur,%10%\%CUR_DIR%\link.cur"
+HKCU,"Control Panel\Cursors\Schemes","%SCHEME_NAME%",0x00000000,"%10%\%CUR_DIR%\pointer.cur,%10%\%CUR_DIR%\pointer.cur,%10%\%CUR_DIR%\working.ani,%10%\%CUR_DIR%\busy.ani,%10%\%CUR_DIR%\precision.cur,%10%\%CUR_DIR%\text.cur,%10%\%CUR_DIR%\pointer.cur,%10%\%CUR_DIR%\unavailable.cur,%10%\%CUR_DIR%\move.cur,%10%\%CUR_DIR%\move.cur,%10%\%CUR_DIR%\move.cur,%10%\%CUR_DIR%\move.cur,%10%\%CUR_DIR%\move.cur,%10%\%CUR_DIR%\pointer.cur,%10%\%CUR_DIR%\link.cur,%10%\%CUR_DIR%\link.cur,%10%\%CUR_DIR%\link.cur"
 
 [Strings]
 DISK_NAME="Custom Cursor Studio Assets"
@@ -88,14 +88,16 @@ def test_scheme_slot_order_and_source_files() -> None:
         "SizeAll",
         "UpArrow",
         "Hand",
+        "Pin",
+        "Person",
     )
-    assert len(REGISTRY_ROLE_ORDER) == 15
+    assert len(REGISTRY_ROLE_ORDER) == 17
     assert tuple(slot for slot, _ in REGISTRY_ROLE_ORDER) == expected_slots
     inf = build_install_inf("Example", _FILES)
     scheme = inf.split("[CursorScheme]\r\n", 1)[1].splitlines()[0]
     _, registry_value = scheme.split(",0x00000000,", 1)
     paths = registry_value.strip('"').split(",")
-    assert len(paths) == 15
+    assert len(paths) == 17
     assert paths[2].endswith(r"\working.ani")
     assert paths[3].endswith(r"\busy.ani")
     expected = [
@@ -113,6 +115,8 @@ def test_scheme_slot_order_and_source_files() -> None:
         "move.cur",
         "move.cur",
         "pointer.cur",
+        "link.cur",
+        "link.cur",
         "link.cur",
     ]
     assert paths == [rf"%10%\%CUR_DIR%\{filename}" for filename in expected]
@@ -142,6 +146,43 @@ def test_title_cannot_inject_inf_syntax() -> None:
     )
 
 
+def test_all_seventeen_slots_accept_distinct_files() -> None:
+    filenames = {
+        **_FILES,
+        "help": "help.cur",
+        "handwriting": "handwriting.cur",
+        "resize_vertical": "vertical.cur",
+        "resize_horizontal": "horizontal.cur",
+        "resize_diagonal_nwse": "nwse.cur",
+        "resize_diagonal_nesw": "nesw.cur",
+        "alternate": "alternate.cur",
+        "location": "location.ani",
+        "person": "person.cur",
+    }
+    inf = build_install_inf("Example", filenames)
+    scheme = inf.split("[CursorScheme]\r\n", 1)[1].splitlines()[0]
+    paths = scheme.rsplit(',"', 1)[1].removesuffix('"').split(",")
+    assert [path.rsplit("\\", 1)[1] for path in paths] == [
+        "pointer.cur",
+        "help.cur",
+        "working.ani",
+        "busy.ani",
+        "precision.cur",
+        "text.cur",
+        "handwriting.cur",
+        "unavailable.cur",
+        "vertical.cur",
+        "horizontal.cur",
+        "nwse.cur",
+        "nesw.cur",
+        "move.cur",
+        "alternate.cur",
+        "link.cur",
+        "location.ani",
+        "person.cur",
+    ]
+
+
 @pytest.mark.parametrize(
     "filename",
     [
@@ -167,12 +208,12 @@ def test_reject_unsafe_filenames(filename: str) -> None:
 
 
 def test_requires_all_eight_unique_role_files() -> None:
-    with pytest.raises(ValueError, match="exactly eight"):
+    with pytest.raises(ValueError, match="eight base roles"):
         build_install_inf(
             "Test",
             {role: filename for role, filename in _FILES.items() if role != "pointer"},
         )
-    with pytest.raises(ValueError, match="exactly eight"):
+    with pytest.raises(ValueError, match="eight base roles"):
         build_install_inf("Test", {**_FILES, "pin": "pin.cur"})
     with pytest.raises(ValueError, match="unique on Windows"):
         build_install_inf("Test", {**_FILES, "pointer": "LINK.cur"})

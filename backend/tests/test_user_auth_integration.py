@@ -254,7 +254,7 @@ async def test_signed_in_features_and_expiry(
     with ZipFile(BytesIO(zip_reply.body)) as archive:
         inf = archive.read("sample-minimal/Install.inf").decode("ascii")
         scheme = inf.split("[CursorScheme]\r\n", 1)[1].splitlines()[0]
-        assert len(scheme.rsplit(',"', 1)[1].removesuffix('"').split(",")) == 15
+        assert len(scheme.rsplit(',"', 1)[1].removesuffix('"').split(",")) == 17
     assert await _downloads(db, pack_id) == before + 1
 
     cursor = f"{PREFIX}/packs/{pack_id}/assets/pointer/cursor.cur"

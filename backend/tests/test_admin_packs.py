@@ -42,7 +42,7 @@ from app.services.admin_assets import (
     validate_asset,
 )
 from app.services.cur_encoder import encode_cur
-from app.services.inf_builder import REGISTRY_ROLE_ORDER
+from app.services.inf_builder import LEGACY_ROLE_FALLBACKS, REGISTRY_ROLE_ORDER
 from app.services.pack_publisher import (
     capture,
     cleanup_pack_assets,
@@ -311,8 +311,22 @@ async def test_publish_lifecycle_preserves_public_contracts(
     draft = _new_draft(admin_account, tokens)
     public = ApiClient("127.0.0.1")
     before = admin_json(draft.edit("POST", "/validate"), 200)
-    assert not before["valid"] and len(cast(list[object], before["missing_roles"])) == 8
+    assert not before["valid"]
+    assert set(cast(list[str], before["missing_roles"])) == set(CursorRole)
     assets = _complete(draft)
+    location_data = encode_cur(_raster(), 32, 5, 6)
+    location = admin_json(draft.upload("cursor", location_data), 201)
+    draft.accept(
+        draft.edit(
+            "PUT",
+            "/roles/location",
+            {
+                **_pair(location, assets[AssetKind.PREVIEW]),
+                "hotspot_x": 5,
+                "hotspot_y": 6,
+            },
+        )
+    )
     urls = {
         kind: "/static/samples/" + _key(draft, asset, kind)
         for kind, asset in assets.items()
@@ -370,12 +384,14 @@ async def test_publish_lifecycle_preserves_public_contracts(
     assert binary.status == 200
     with ZipFile(BytesIO(binary.body)) as archive:
         assert archive.testzip() is None
-        assert len(archive.namelist()) == 10
+        assert len(archive.namelist()) == 11
+        assert archive.read(f"{draft.slug}/location.cur") == location_data
         inf = archive.read(f"{draft.slug}/Install.inf").decode("ascii")
         scheme = inf.split("[CursorScheme]\r\n", 1)[1].splitlines()[0]
         paths = scheme.rsplit(',"', 1)[1].removesuffix('"').split(",")
         assert [path.rsplit("\\", 1)[-1] for path in paths] == [
-            f"{role}.cur" for _, role in REGISTRY_ROLE_ORDER
+            f"{LEGACY_ROLE_FALLBACKS.get(role, role) if role != 'location' else role}.cur"
+            for _, role in REGISTRY_ROLE_ORDER
         ]
     with ThreadPoolExecutor(max_workers=2) as pool:
         outcomes = list(pool.map(lambda _: draft.edit("POST", "/unpublish"), range(2)))
@@ -402,14 +418,11 @@ async def test_publish_lifecycle_preserves_public_contracts(
     assert public.request("GET", share_path).status == 200
 
     async with db.connect() as connection:
-        assert (
-            await connection.scalar(
-                select(func.count())
-                .select_from(CursorItem)
-                .where(CursorItem.pack_id == draft.id)
-            )
-            == 8
-        )
+        assert await connection.scalar(
+            select(func.count())
+            .select_from(CursorItem)
+            .where(CursorItem.pack_id == draft.id)
+        ) == len(CursorRole)
 
 
 class _WriteFailsAfterPut(LocalPrivateAssets):
@@ -502,7 +515,7 @@ async def test_faults_roll_back_registry_and_public_projection(
     invalid = draft.edit("POST", "/publish")
     admin_error(invalid, 422, "PACK_INVALID")
     details = cast(dict[str, object], admin_json(invalid, 422)["error"])["details"]
-    assert len(cast(list[object], details)) == 8
+    assert len(cast(list[object], details)) == len(CursorRole)
     stored.write_bytes(original)
     async with factory() as session:
         async with session.begin():

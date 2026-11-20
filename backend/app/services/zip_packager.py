@@ -12,12 +12,15 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 from anyio import to_thread
 
-from app.models.cursor_item import CursorRole
 from app.services.cur_encoder import inspect_cur_header
 from app.services.inf_builder import (
     INSTALL_README,
+    LEGACY_ROLE_FALLBACKS,
     REGISTRY_ROLE_ORDER,
+    REQUIRED_ROLES,
+    WINDOWS_ROLES,
     build_install_inf,
+    scheme_filenames,
 )
 from app.services.storage import MAX_ASSET_BYTES, Storage, StorageError
 
@@ -132,7 +135,9 @@ def _write_archive(
     inf = build_install_inf(title, filenames)
     scheme = inf.split("[CursorScheme]\r\n", 1)[1].splitlines()[0]
     paths = scheme.rsplit(',"', 1)[1].removesuffix('"').split(",")
-    expected = [rf"%10%\%CUR_DIR%\{filenames[role]}" for _, role in REGISTRY_ROLE_ORDER]
+    expected = [
+        rf"%10%\%CUR_DIR%\{filename}" for filename in scheme_filenames(filenames)
+    ]
     if paths != expected or {path.rsplit("\\", 1)[-1] for path in paths} != set(assets):
         raise RuntimeError("Install.inf does not match the ZIP manifest")
 
@@ -155,14 +160,19 @@ def _write_archive(
 async def build_pack_zip(
     title: str, slug: str, urls: Mapping[str, str], storage: Storage
 ) -> tuple[str, bytes]:
-    """Validate all eight assets before returning a filename and its ZIP data."""
-    if set(urls) != {role.value for role in CursorRole}:
-        raise PackIncomplete("Pack lacks one or more cursor roles")
+    """Validate the cursor assets before returning a filename and its ZIP data."""
+    if not REQUIRED_ROLES <= urls.keys() <= WINDOWS_ROLES:
+        raise PackIncomplete("Pack has missing or unknown cursor roles")
     remaining = MAX_PACK_BYTES
     filenames: dict[str, str] = {}
     assets: dict[str, bytes] = {}
-    for role in CursorRole:
+    for _, role in REGISTRY_ROLE_ORDER:
+        if role not in urls:
+            continue
         url = urls[role]
+        fallback = LEGACY_ROLE_FALLBACKS.get(role)
+        if fallback is not None and urls[fallback] == url:
+            continue
         extension = _asset_extension(url)
         if remaining <= 0:
             raise AssetUnavailable("Pack exceeds the byte budget")

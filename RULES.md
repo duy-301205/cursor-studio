@@ -38,7 +38,7 @@
 ### B03 — DB and idempotency
 
 - Schema/enum/indices phải khớp `ARCHITECTURE.md` canonical DDL. Mọi raw SQL phải parameterized; không string interpolation input.
-- Dev lifespan seed 5 categories cùng ít nhất 2 published packs đủ 8 role, vẽ PNG/CUR hợp lệ bằng chính encoder service; chạy lần 2 không sinh bản ghi trùng/đổi ID.
+- Dev lifespan seed 5 categories cùng ít nhất 2 published packs đủ 17 vị trí, vẽ PNG/CUR hợp lệ cho 8 vai trò gốc bằng chính encoder service và dùng ánh xạ tương thích cho các vị trí còn lại. Chạy lần 2 không sinh bản ghi trùng/đổi ID.
 - FK `ON DELETE CASCADE` cho items, `UNIQUE(pack_id,role_type)`; published validation enforced ở service, không chỉ UI.
 - DB UTC (`DATETIME(6)`); `created_at`/`updated_at` nhất quán; share expiry timestamp lấy từ server.
 - Tăng `download_count` có atomic SQL update `download_count = download_count + 1` sau khi gói đã tạo thành công, tránh lost update.
@@ -71,42 +71,44 @@
 - **KHÔNG** dùng `win2xcur` để PNG → Windows CUR: tool đó đảo chiều; nếu dùng thư viện khác phải chứng minh chiều conversion và binary test.
 - `.ani` do admin cung cấp được validate RIFF/ACON và limits, không cố sinh `.ani` bằng CUR encoder.
 
-### B07 — 15 Registry slots MUST preserve order
+### B07 — 17 Registry slots MUST preserve order
 
 ```python
 # Canonical order: NO SORT, NO REORDER
 WINDOWS_SLOT_TO_ROLE = (
     ('Arrow', 'pointer'),
-    ('Help', 'pointer'),
+    ('Help', 'help'),
     ('AppStarting', 'working'),
     ('Wait', 'busy'),
     ('Crosshair', 'precision'),
     ('IBeam', 'text'),
-    ('NWPen', 'pointer'),
+    ('NWPen', 'handwriting'),
     ('No', 'unavailable'),
-    ('SizeNS', 'move'),
-    ('SizeWE', 'move'),
-    ('SizeNWSE', 'move'),
-    ('SizeNESW', 'move'),
+    ('SizeNS', 'resize_vertical'),
+    ('SizeWE', 'resize_horizontal'),
+    ('SizeNWSE', 'resize_diagonal_nwse'),
+    ('SizeNESW', 'resize_diagonal_nesw'),
     ('SizeAll', 'move'),
-    ('UpArrow', 'pointer'),
+    ('UpArrow', 'alternate'),
     ('Hand', 'link'),
+    ('Pin', 'location'),
+    ('Person', 'person'),
 )
-assert len(WINDOWS_SLOT_TO_ROLE) == 15
+assert len(WINDOWS_SLOT_TO_ROLE) == 17
 ```
 
-- Registry path: `HKCU,"Control Panel\Cursors\Schemes"`; 15 values tương ứng **một** chuỗi comma-separated trong value named scheme. Không nhầm label marketing `Pointer/Work/Busy/...` với Registry slot names.
+- Registry path: `HKCU,"Control Panel\Cursors\Schemes"`; 17 đường dẫn tương ứng **một** chuỗi comma-separated trong value named scheme. Không nhầm label marketing `Pointer/Work/Busy/...` với Registry slot names.
 - Mọi file được refer trong scheme **phải có trong ZIP**; `.ani` extension phải chính xác; names ASCII-safe, sanitized. INF `CopyFiles`, `SourceDisksNames`, `SourceDisksFiles` và `DestinationDirs` nhất quán.
 - Không tự ghi `HKLM`, chạy PowerShell, RunOnce, UAC bypass hay auto-execute system changes. Website không tự áp dụng cursor Windows.
-- Windows 11 có thể có 2 slot thêm `Pin`/`Person`; MVP hỗ trợ 15 baseline, không tự ý thêm slot thứ 16/17 trong version 1 khi chưa có QA.
+- CR-20261120-01 thêm `Pin` và `Person` ở cuối chuỗi. Kiểm tra cài đặt trên Windows trước khi phát hành.
 
 ### B08 — ZIP in-memory only
 
 - Tạo ZIP bằng `ZipFile(BytesIO(), ZIP_DEFLATED)`, không tạo file ZIP tạm trong `/tmp`, không load toàn bucket, không viết file ZIP lên ổ đĩa.
 - Các **assets nguồn** đọc qua trusted local/R2 adapter; không fetch remote URL bất kỳ từ user/input/share config.
 - Files trong ZIP do server định tên; không absolute path, `..`, `\`, control chars, không ZIP Slip, không symlink entries.
-- Tổng bytes raw assets <=50MiB, từng file <=10MiB, 8 roles; giới hạn jobs đồng thời để tránh memory exhaustion.
-- Trước khi trả 200: tạo manifest, verify 15 references resolve, assert ZIP format, rồi mới atomic count increment.
+- Tổng bytes raw assets <=50MiB, từng file <=10MiB, tối đa 17 tệp con trỏ; giới hạn jobs đồng thời để tránh memory exhaustion.
+- Trước khi trả 200: tạo manifest, verify 17 references resolve, assert ZIP format, rồi mới atomic count increment.
 - `Content-Disposition` có tên an toàn, `Cache-Control:no-store`, `X-Content-Type-Options:nosniff`.
 
 ### B09 — Share safety
@@ -120,7 +122,7 @@ assert len(WINDOWS_SLOT_TO_ROLE) == 15
 ### B10 — Tests and observability
 
 - Backend CI: ruff, mypy/pyright, pytest unit & integration, SQL migration smoke. Mỗi endpoint có happy path + bad input + DB/error case.
-- Windows installer tests: parse scheme 15 positions, count strings, check each `.cur/.ani` exists in ZIP; test actual install Windows VM trước release.
+- Windows installer tests: parse scheme 17 positions, count strings, check each `.cur/.ani` exists in ZIP; test actual install Windows VM trước release.
 - Failing test không được “fix” bằng cách xóa test, hardcode expected success hay disable validator.
 - `print()` không thay production logs; no secrets in trace.
 

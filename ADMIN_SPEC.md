@@ -2,6 +2,11 @@
 
 **A01 · Đề xuất chờ chủ dự án phê duyệt · 2026-11-18**
 
+**CR-20261120-01 · Hợp đồng hiện hành:** Admin nhận đủ 17 vai trò trong
+[ARCHITECTURE.md](ARCHITECTURE.md#cr-20261120-01--windows-cursor-roles).
+Gán tài sản, trả chi tiết, kiểm tra và xuất bản đều sử dụng tập 17 vai trò.
+Các đoạn mô tả 8 vai trò và 15 vị trí bên dưới ghi lại phạm vi ban đầu.
+
 Phạm vi theo [ADMIN_EXTENSION.md](ADMIN_EXTENSION.md). Admin nội bộ tạo bộ tĩnh 8 role, lưu nháp, xem trước, kiểm tra, xuất bản và thu hồi. ANI là tùy chọn có cổng nghiệm thu riêng. Kế hoạch thực thi nằm trong [ADMIN_TASKS.md](ADMIN_TASKS.md).
 
 ## 1. Điểm tích hợp đã đối chiếu với repository

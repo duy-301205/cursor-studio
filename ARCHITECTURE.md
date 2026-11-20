@@ -256,7 +256,9 @@ CREATE TABLE cursor_items (
   pack_id BIGINT UNSIGNED NOT NULL,
   role_type ENUM(
     'pointer','link','text','busy','working',
-    'precision','unavailable','move'
+    'precision','unavailable','move',
+    'help','handwriting','resize_vertical','resize_horizontal',
+    'resize_diagonal_nwse','resize_diagonal_nesw','alternate','location','person'
   ) NOT NULL,
   preview_png_url VARCHAR(1024) NOT NULL,
   cursor_file_url VARCHAR(1024) NOT NULL,
@@ -1074,6 +1076,42 @@ VITE_API_BASE_URL=http://localhost:8000/api/v1
 Đừng copy placeholder sang production. Tách env password DB thành các biến rời để tránh ký tự đặc biệt phá URL. `PUBLIC_FRONTEND_BASE_URL` là nguồn tạo share URL, không lấy từ Host header do client gửi.
 
 ## 13. Contract change protocol
+
+### CR-20261120-01 — Windows cursor roles
+
+This section supersedes the eight-role catalog/Admin and 15-slot installer
+limits elsewhere in this document. The shared Mix/Share v1 contract still
+accepts only its original eight roles.
+
+Migration `0004_windows_cursor_roles` expands `cursor_items.role_type` and
+`admin_pack_roles.role_type` by appending the nine values below in table order.
+It backfills a complete legacy pack's missing roles with the source asset
+references and hotspots, preserving the original item IDs and file locations.
+Any incomplete draft remains editable and must be completed before publishing.
+
+| New API role | Windows slot | Legacy source |
+| --- | --- | --- |
+| `help` | Help | `pointer` |
+| `handwriting` | NWPen | `pointer` |
+| `resize_vertical` | SizeNS | `move` |
+| `resize_horizontal` | SizeWE | `move` |
+| `resize_diagonal_nwse` | SizeNWSE | `move` |
+| `resize_diagonal_nesw` | SizeNESW | `move` |
+| `alternate` | UpArrow | `pointer` |
+| `location` | Pin | `link` |
+| `person` | Person | `link` |
+
+The Admin role assignment route accepts all 17 values. Validate and publish
+require each position, and the Admin and public detail responses expose the
+role assignments using the existing fields. Gallery summaries still expose
+only the pointer. The installer uses the existing 15 registry positions in
+their original order, assigning the dedicated role where available, then
+appends Pin and Person. When a role uses its legacy source's cursor URL, both
+positions refer to the same archived file.
+
+Apply the migration before deploying the updated backend against an existing
+database. Downgrade removes the nine expanded role assignments while
+preserving the original eight assignments and uploaded files.
 
 Mọi thay đổi public endpoint/enum/field buộc cập nhật: (1) Pydantic DTO, (2) OpenAPI, (3) `frontend/src/types/api.ts` và validation, (4) test contract, (5) `ARCHITECTURE.md` + entry `PROGRESS.md`. Version breaking change phải đặt API mới (ví dụ `/api/v2`) thay vì lặng lẽ phá client.
 

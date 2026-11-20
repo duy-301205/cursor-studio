@@ -18,6 +18,7 @@ from app.models.cursor_item import CursorItem, CursorRole
 from app.models.cursor_pack import CursorPack, PackStatus
 from app.models.custom_creation import CustomCreation
 from app.services.cur_encoder import encode_cur
+from app.services.inf_builder import LEGACY_ROLE_FALLBACKS
 
 SAMPLES_DIRECTORY = Path(__file__).resolve().parents[1] / "static" / "samples"
 
@@ -169,11 +170,13 @@ async def seed_development(
                     select(CursorPack.id).where(CursorPack.slug == slug)
                 )
             ).scalar_one()
-            for role, (x, y) in _HOTSPOTS.items():
+            for role in CursorRole:
+                source = CursorRole(LEGACY_ROLE_FALLBACKS.get(role, role))
+                x, y = _HOTSPOTS[source]
                 item = insert(CursorItem).values(pack_id=pack_id, role_type=role)
                 item_values = {
-                    "preview_png_url": f"{assets}/{role}.png",
-                    "cursor_file_url": f"{assets}/{role}.cur",
+                    "preview_png_url": f"{assets}/{source}.png",
+                    "cursor_file_url": f"{assets}/{source}.cur",
                     "hotspot_x": x,
                     "hotspot_y": y,
                 }

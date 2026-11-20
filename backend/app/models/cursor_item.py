@@ -33,6 +33,15 @@ class CursorRole(StrEnum):
     PRECISION = "precision"
     UNAVAILABLE = "unavailable"
     MOVE = "move"
+    HELP = "help"
+    HANDWRITING = "handwriting"
+    RESIZE_VERTICAL = "resize_vertical"
+    RESIZE_HORIZONTAL = "resize_horizontal"
+    RESIZE_DIAGONAL_NWSE = "resize_diagonal_nwse"
+    RESIZE_DIAGONAL_NESW = "resize_diagonal_nesw"
+    ALTERNATE = "alternate"
+    LOCATION = "location"
+    PERSON = "person"
 
 
 class CursorItem(Base):

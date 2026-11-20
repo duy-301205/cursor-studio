@@ -22,6 +22,7 @@ from app.models.cursor_item import CursorItem, CursorRole
 from app.models.cursor_pack import CursorPack
 from app.models.custom_creation import CustomCreation
 from app.services.cur_encoder import inspect_cur_header
+from app.services.inf_builder import REQUIRED_ROLES
 
 PREFIX = "/api/v1"
 SHARE = f"{PREFIX}/studio/share"
@@ -207,12 +208,12 @@ async def test_download_zip_and_atomic_count(
         assert archive.testzip() is None
         names = {PurePosixPath(name) for name in archive.namelist()}
         assert all(name.parent == PurePosixPath("sample-minimal") for name in names)
-        assets = {f"{role}.cur" for role in ROLES}
+        assets = {f"{role}.cur" for role in REQUIRED_ROLES}
         assert {name.name for name in names} == assets | {"Install.inf", "README.txt"}
         inf = archive.read("sample-minimal/Install.inf").decode("ascii")
         scheme = inf.split("[CursorScheme]\r\n", 1)[1].splitlines()[0]
         paths = scheme.rsplit(',"', 1)[1].removesuffix('"').split(",")
-        assert len(paths) == 15
+        assert len(paths) == 17
         assert {path.rsplit("\\", 1)[1] for path in paths} == assets
         assert paths[2].endswith(r"\working.cur") and paths[3].endswith(r"\busy.cur")
     assert await _downloads(db, pack_id) == before + 1
@@ -358,13 +359,15 @@ async def test_seed_rerun_preserves_ids_and_asset_mtimes(
             ]
         files = {
             str(path.relative_to(SAMPLES_DIRECTORY)): path.stat().st_mtime_ns
-            for path in SAMPLES_DIRECTORY.rglob("*")
+            for slug in ("sample-minimal", "sample-neon")
+            for path in (SAMPLES_DIRECTORY / slug).rglob("*")
             if path.is_file()
         }
         return rows, files
 
     before = await snapshot()
-    assert [len(rows) for rows in before[0]] == [5, 2, 16] and len(before[1]) == 34
+    assert [len(rows) for rows in before[0]] == [5, 2, 2 * len(ROLES)]
+    assert len(before[1]) == 34
     await seed_development(async_sessionmaker(db), "http://localhost:8000")
     await seed_development(async_sessionmaker(db), "http://localhost:8000")
     assert await snapshot() == before

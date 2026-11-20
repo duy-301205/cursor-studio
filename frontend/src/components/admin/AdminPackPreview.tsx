@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Sparkles, Eye, Info, Crosshair } from 'lucide-react';
 import type { CursorAsset, CursorRole } from '../../types/api.ts';
-import { MIX_CURSOR_ROLES } from '../../types/api.ts';
+import { CURSOR_ROLES } from '../../types/api.ts';
 import type { AdminPackDetail, AdminPackRole } from '../../types/admin.ts';
 import { InteractiveSandbox } from '../InteractiveSandbox.tsx';
 
@@ -36,12 +36,12 @@ export const AdminPackPreview: React.FC<AdminPackPreviewProps> = ({
   }, [roles]);
 
   const sandboxAssignedCount = useMemo(() => {
-    return MIX_CURSOR_ROLES.filter((r) => Boolean(rolePreviews[r])).length;
+    return CURSOR_ROLES.filter((r) => Boolean(rolePreviews[r])).length;
   }, [rolePreviews]);
 
   return (
     <div className={`space-y-4 ${className}`}>
-      {/* Preview Section Header */}
+      {/* 1. Preview Section Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-surface border border-line">
         <div className="flex items-center gap-2.5">
           <div className="p-2 rounded-xl bg-brand-soft text-brand">
@@ -52,22 +52,23 @@ export const AdminPackPreview: React.FC<AdminPackPreviewProps> = ({
               Interactive Windows Sandbox Preview — {pack.title || pack.slug}
             </h3>
             <p className="text-xs text-muted">
-              Mô phỏng trải nghiệm con trỏ tương tác thực tế trên 8 vùng chức năng Windows.
+              Mô phỏng trải nghiệm con trỏ tương tác thực tế trên đủ 17 vùng vị trí Windows.
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium text-muted">
-            {sandboxAssignedCount} / 8 Sandbox Roles sẵn sàng trải nghiệm
+            {sandboxAssignedCount} / 17 Roles sẵn sàng trải nghiệm
           </span>
         </div>
       </div>
 
-      {/* Embedded Sandbox with independent theme */}
+      {/* 2. Embedded Sandbox with independent theme */}
       <div className="relative">
         <InteractiveSandbox
           rolePreviews={rolePreviews}
+          isAdmin={true}
           onRoleInspect={(role) => setInspectedRole(role)}
         />
       </div>

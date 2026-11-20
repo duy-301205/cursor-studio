@@ -12,8 +12,18 @@ import {
   Ban,
   Move,
   Info,
+  HelpCircle,
+  PenTool,
+  ArrowUpDown,
+  ArrowLeftRight,
+  MoveDiagonal,
+  MoveDiagonal2,
+  ArrowUp,
+  MapPin,
+  User,
 } from 'lucide-react';
 import type { CursorAsset, CursorRole } from '../types/api';
+import { SANDBOX_17_ROLES, type SandboxRoleDefinition } from '../types/sandboxRoles.ts';
 import { getAdminApiBaseUrl } from '../lib/adminApi.ts';
 import { getApiBaseUrl } from '../lib/api.ts';
 
@@ -21,74 +31,37 @@ export interface InteractiveSandboxProps {
   rolePreviews: Partial<Record<CursorRole, CursorAsset>>;
   initialMode?: 'light' | 'dark';
   onRoleInspect?: (role: CursorRole) => void;
+  isAdmin?: boolean;
 }
 
-interface RoleConfig {
-  role: CursorRole;
-  label: string;
-  nativeFallback: string;
-  description: string;
+export interface RoleConfig extends SandboxRoleDefinition {
   icon: React.ElementType;
 }
 
-const ROLES_CONFIG: readonly RoleConfig[] = [
-  {
-    role: 'pointer',
-    label: 'Normal Select',
-    nativeFallback: 'auto',
-    description: 'Windows desktop folder / primary click',
-    icon: Folder,
-  },
-  {
-    role: 'link',
-    label: 'Link Select',
-    nativeFallback: 'pointer',
-    description: 'Hyperlink & interactive elements',
-    icon: ExternalLink,
-  },
-  {
-    role: 'text',
-    label: 'Text Select',
-    nativeFallback: 'text',
-    description: 'Editable input fields & documents',
-    icon: Type,
-  },
-  {
-    role: 'busy',
-    label: 'Busy / Wait',
-    nativeFallback: 'wait',
-    description: 'System waiting / blocked operations',
-    icon: Clock,
-  },
-  {
-    role: 'working',
-    label: 'Working in Background',
-    nativeFallback: 'progress',
-    description: 'Background tasks & progress loading',
-    icon: Loader2,
-  },
-  {
-    role: 'precision',
-    label: 'Precision Select',
-    nativeFallback: 'crosshair',
-    description: 'Target crosshair & graphics canvas',
-    icon: Crosshair,
-  },
-  {
-    role: 'unavailable',
-    label: 'Unavailable',
-    nativeFallback: 'not-allowed',
-    description: 'Disabled buttons & restricted actions',
-    icon: Ban,
-  },
-  {
-    role: 'move',
-    label: 'Move / Resize',
-    nativeFallback: 'move',
-    description: 'Draggable windows & movable items',
-    icon: Move,
-  },
-] as const;
+const ROLE_ICONS: Record<CursorRole, React.ElementType> = {
+  pointer: Folder,
+  help: HelpCircle,
+  working: Loader2,
+  busy: Clock,
+  precision: Crosshair,
+  text: Type,
+  handwriting: PenTool,
+  unavailable: Ban,
+  resize_vertical: ArrowUpDown,
+  resize_horizontal: ArrowLeftRight,
+  resize_diagonal_nwse: MoveDiagonal,
+  resize_diagonal_nesw: MoveDiagonal2,
+  move: Move,
+  alternate: ArrowUp,
+  link: ExternalLink,
+  location: MapPin,
+  person: User,
+};
+
+export const ROLES_CONFIG: readonly RoleConfig[] = SANDBOX_17_ROLES.map((def) => ({
+  ...def,
+  icon: ROLE_ICONS[def.role],
+}));
 
 function animationEndpoint(asset: CursorAsset | undefined, role: CursorRole): string | null {
   if (!asset) return null;
@@ -123,6 +96,7 @@ export function InteractiveSandbox({
   rolePreviews,
   initialMode = 'light',
   onRoleInspect,
+  isAdmin = false,
 }: InteractiveSandboxProps): React.ReactElement {
   // Independent sandbox theme state (RULES.md F03 — completely isolated from website theme)
   const [sandboxMode, setSandboxMode] = useState<'light' | 'dark'>(initialMode);
@@ -286,7 +260,7 @@ export function InteractiveSandbox({
         <div className="flex items-center gap-2">
           <Info className="w-3.5 h-3.5 text-violet-400 shrink-0" />
           <span>
-            Hover over any of the 8 simulated zones below to test the corresponding cursor state and native fallback.
+            Rê chuột vào bất kỳ ô nào trong đủ 17 vị trí Windows bên dưới để thử con trỏ tương ứng và tọa độ hotspot.
           </span>
         </div>
         {activeZone && (
@@ -297,17 +271,19 @@ export function InteractiveSandbox({
       </div>
 
       {/* ============================================================ */}
-      {/* 3. The 8 Interactive Zones Grid                              */}
+      {/* 3. The 17 Interactive Zones Grid (Canonical Windows Order)    */}
       {/* ============================================================ */}
-      <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {ROLES_CONFIG.map(({ role, label, nativeFallback, description, icon: Icon }) => {
+      <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {ROLES_CONFIG.map(({ role, slot, label, nativeFallback, description, icon: Icon }) => {
           const asset = rolePreviews[role];
+          const isAssigned = Boolean(asset && asset.preview_png_url);
           const cursorValue = getCursorStyle(role, nativeFallback);
 
           return (
             <div
               key={role}
               data-cursor-role={role}
+              data-testid={`sandbox-zone-${role}`}
               style={{ cursor: activeZone === role && renderedPreview ? 'none' : cursorValue }}
               onPointerEnter={(event) => {
                 if (event.pointerType === 'touch') return;
@@ -321,21 +297,31 @@ export function InteractiveSandbox({
               }}
               className={`group relative rounded-xl border p-4 flex flex-col justify-between min-h-[140px] transition-all duration-150 shadow-sm ${zoneCardClasses}`}
             >
-              {/* Header: Role Name & State Badge */}
+              {/* Header: Role Name, Slot & Hotspot/Status Badge */}
               <div className="flex items-start justify-between gap-2">
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-1.5 font-bold text-xs tracking-tight">
+                <div className="space-y-0.5 min-w-0">
+                  <div className="flex items-center gap-1.5 font-bold text-xs tracking-tight truncate">
                     <Icon className="w-3.5 h-3.5 text-violet-400 shrink-0" />
-                    <span>{label}</span>
+                    <span className="truncate">{label}</span>
                   </div>
                   <span className="font-mono text-[10px] opacity-60 block">
-                    [{role}]
+                    [{role}] ({slot})
                   </span>
                 </div>
 
-                {asset ? (
-                  <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-300 font-semibold shrink-0">
+                {isAssigned && asset ? (
+                  <span
+                    data-testid={`hotspot-badge-${role}`}
+                    className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-300 font-semibold shrink-0"
+                  >
                     ({asset.hotspot_x},{asset.hotspot_y})
+                  </span>
+                ) : isAdmin ? (
+                  <span
+                    data-testid={`unassigned-badge-${role}`}
+                    className="text-[10px] px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-400 font-semibold shrink-0"
+                  >
+                    Chưa gán
                   </span>
                 ) : (
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-500/20 text-slate-400 font-medium shrink-0">
@@ -361,6 +347,33 @@ export function InteractiveSandbox({
                 {role === 'link' && (
                   <span className="underline text-violet-400 text-[11px] font-semibold">Click</span>
                 )}
+                {role === 'location' && (
+                  <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                )}
+                {role === 'person' && (
+                  <User className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                )}
+                {role === 'help' && (
+                  <span className="text-violet-400 text-[11px] font-bold">?</span>
+                )}
+                {role === 'handwriting' && (
+                  <PenTool className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                )}
+                {role === 'resize_vertical' && (
+                  <ArrowUpDown className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+                )}
+                {role === 'resize_horizontal' && (
+                  <ArrowLeftRight className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+                )}
+                {role === 'resize_diagonal_nwse' && (
+                  <MoveDiagonal className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+                )}
+                {role === 'resize_diagonal_nesw' && (
+                  <MoveDiagonal2 className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+                )}
+                {role === 'alternate' && (
+                  <ArrowUp className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+                )}
               </div>
 
               {/* Footer: Fallback keyword indicator */}
@@ -372,6 +385,8 @@ export function InteractiveSandbox({
           );
         })}
       </div>
+
+      {/* Floating Animated Cursor Preview (if active) */}
       {renderedPreview && createPortal(
         <img
           ref={previewImage}

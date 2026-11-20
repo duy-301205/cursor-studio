@@ -818,8 +818,15 @@ next_task: T02
   - **E2E Integration Test (`cr17_e2e.test.ts`):** Tạo bộ nháp thử nghiệm trên backend local `http://127.0.0.1:8000`, upload thumbnail, gán tệp con trỏ riêng cho `location` (Location Select) với hotspot riêng (7, 14), upload và gán đủ 17 vị trí. Tải lại trang/API kiểm tra binding kiên định. Xác thực qua `validatePack` (0 missing roles), xuất bản (`publishPack`), tải ZIP và giải nén `Install.inf`: xác nhận `Install.inf` có đủ 17 đường dẫn registry, slot 15 (Pin/Location Select) trỏ chính xác đến `\location.cur`, tệp `location.cur` trong ZIP bảo toàn nguyên vẹn bytes và hotspot (7, 14). Đã hủy xuất bản bộ thử nghiệm về lại draft để không ảnh hưởng gallery công khai. Xác minh 4 bộ thật (`midnight-soots`, `letters-to-the-sky`, `little-witchs-desk`, `whispering-woods`) vẫn nguyên vẹn 17 items.
   - **Kiểm thử & Build:**
     - `npm run typecheck`: PASS (0 errors, TypeScript strict).
-    - `npm test`: PASS (82/82 pass, 0 fail, 3 skipped do rate-limit dev IP).
+    - `npm test`: PASS (86/86 pass, 0 fail, 2 skipped do rate-limit dev IP).
     - `npm run build`: PASS (Vite 5.4.21 production build thành công trong `dist/`).
+  - **Tích hợp Đủ 17 Vị Trí Windows trực tiếp vào Interactive Sandbox:**
+    - Thay vì tách riêng thành bộ chọn phụ bên dưới, `InteractiveSandbox` ([InteractiveSandbox.tsx](file:///e:/cursor-studio/frontend/src/components/InteractiveSandbox.tsx)) được mở rộng trực tiếp từ lưới 8 thẻ lên đủ 17 thẻ tương tác theo đúng thứ tự chuẩn Windows Registry (`SANDBOX_17_ROLES` trong [sandboxRoles.ts](file:///e:/cursor-studio/frontend/src/types/sandboxRoles.ts)).
+    - Mỗi thẻ trong số 17 vị trí hoạt động trực tiếp theo cơ chế hover-to-test tương tự 8 thẻ ban đầu: rê chuột vào bất kỳ ô nào sẽ kích hoạt con trỏ tương ứng với ảnh preview tùy biến, tọa độ hotspot thực tế `(${hotspot_x}, ${hotspot_y})` và fallback CSS chuẩn.
+    - Trong Admin (`AdminPackPreview` với `isAdmin={true}`): các vị trí chưa được gán tệp hiển thị badge cảnh báo "Chưa gán", vị trí đã gán hiển thị badge tọa độ hotspot `(${x}, ${y})`.
+    - Trên Catalog (`PackDetailPage`): hiển thị toàn bộ 17 thẻ vị trí thực tế của bộ con trỏ, thẻ chưa gán hiển thị badge "Default".
+    - Giữ độc lập hoàn toàn với Mix/Share v1 (8 vai trò) và cơ chế chuyển đổi theme Sáng/Tối (Light/Dark) riêng biệt của Sandbox.
+    - Bộ test tích hợp `cr17_tester.test.ts` kiểm thử toàn bộ 17 vị trí trong `SANDBOX_17_ROLES`, xác minh việc gán 2 tệp riêng biệt cho Location Select và Person Select trên bộ nháp backend local, và xác nhận cả hai thẻ trong Interactive Sandbox nhận đúng con trỏ và hotspot tương ứng. 86/86 test PASS.
 - **Mục còn mở (Windows QA):** Cài đặt thủ công tệp ZIP trên hệ điều hành Windows thực tế và kiểm tra trong Mouse Properties > Pointers để mở cho phiên nghiệm thu Windows QA.
 - **Tiếp theo:** Nghiệm thu Windows QA thủ công khi có môi trường phù hợp. Phía frontend và backend cho CR-20261120-01 đã hoàn tất 100%.
 

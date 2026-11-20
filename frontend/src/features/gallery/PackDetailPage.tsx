@@ -351,13 +351,13 @@ export function PackDetailPage(): React.ReactElement {
       </section>
 
       {/* ============================================================ */}
-      {/* 2. Interactive Sandbox Preview Area (8 Zones)                */}
+      {/* 2. Interactive Sandbox Preview Area (17 Roles)               */}
       {/* ============================================================ */}
       <section className="space-y-4">
         <div>
           <h2 className="text-2xl font-bold text-ink">Interactive Sandbox</h2>
           <p className="text-sm text-muted">
-            Test all 8 cursor states in the interactive environment with independent Light/Dark simulation.
+            Trải nghiệm trực tiếp đủ 17 vị trí con trỏ Windows trong môi trường tương tác với mô phỏng Sáng/Tối độc lập.
           </p>
         </div>
 
@@ -370,7 +370,7 @@ export function PackDetailPage(): React.ReactElement {
               </div>
               <h3 className="font-bold text-lg text-ink">Thử con trỏ trong Interactive Sandbox</h3>
               <p className="text-sm text-muted max-w-md">
-                Đăng nhập để trải nghiệm trực tiếp 8 trạng thái con trỏ và chuyển đổi môi trường sáng/tối.
+                Đăng nhập để trải nghiệm trực tiếp các trạng thái con trỏ và chuyển đổi môi trường sáng/tối.
               </p>
               <button
                 type="button"
